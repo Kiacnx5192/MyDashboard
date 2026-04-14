@@ -66,7 +66,7 @@ st.markdown("""
 with st.sidebar:
     st.title("👨‍💼 มายนี่ Assistant")
     st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=100)
-    st.info("คืนความสวยงามและจัดกึ่งกลางตารางให้แล้วนะคะคุณเกี๊ยะ! ✨")
+    st.info("แก้บั๊กตารางเรียบร้อย คืนความสวยงาม 100% ค่ะ! ✨")
     if st.button("🔄 REFRESH DATA"):
         st.cache_data.clear()
         st.rerun()
@@ -97,7 +97,7 @@ m4.metric("🔵 USDTHB", f"{p[3][0]:,.3f}", f"{p[3][1]:+,.3f}", delta_color="inv
 
 st.divider()
 
-# ---------------- 📊 Trading Performance (Custom Centered Tables) ----------------
+# ---------------- 📊 Trading Performance ----------------
 st.markdown('<div class="section-header">📊 MY TRADING PERFORMANCE</div>', unsafe_allow_html=True)
 
 @st.cache_data(ttl=300)
@@ -112,28 +112,26 @@ col_left, col_right = st.columns([1, 1.8])
 
 with col_left:
     st.markdown('<div class="glass-container">', unsafe_allow_html=True)
-    st.subheader("📈 วิเคราะห์การเทรด")
+    st.markdown("<h3 style='text-align: center;'>📈 วิเคราะห์การเทรด</h3>", unsafe_allow_html=True)
     df_dash = load_sheet_data("Dashboard8")
     if not df_dash.empty:
-        # สร้างตาราง HTML เองเพื่อบังคับ Center
         html = '<table class="custom-table"><thead><tr><th>รายการ</th><th>ข้อมูลสรุป</th></tr></thead><tbody>'
         for i, row in df_dash.iloc[:, :2].iterrows():
-            html += f'<tr><td>{row[0]}</td><td><b>{row[1]}</b></td></tr>'
+            # แก้ไขบั๊กตรงนี้: เปลี่ยนมาใช้ .iloc เพื่อเรียกข้อมูลตามตำแหน่งที่ถูกต้อง
+            html += f'<tr><td>{row.iloc[0]}</td><td><b>{row.iloc[1]}</b></td></tr>'
         html += '</tbody></table>'
         st.markdown(html, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 with col_right:
     st.markdown('<div class="glass-container">', unsafe_allow_html=True)
-    st.subheader("📝 บันทึกการเทรดล่าสุด (Center Aligned)")
+    st.markdown("<h3 style='text-align: center;'>📝 บันทึกการเทรดล่าสุด</h3>", unsafe_allow_html=True)
     df_data = load_sheet_data("Data8")
     if not df_data.empty:
-        # เลือกคอลัมน์สำคัญ และเรียงไม้ล่าสุดขึ้นบน
         cols = ["ลำดับ", "Setup รูปแบบที่เข้า", "Direction Buy/Sell", "Entry ราคาเข้า", "Result ผลลัพธ์", "P/L ($) กำไร"]
         df_display = df_data[cols] if set(cols).issubset(df_data.columns) else df_data
-        df_display = df_display.iloc[::-1] # ไม้ล่าสุดขึ้นบน
+        df_display = df_display.iloc[::-1]
         
-        # สร้างตารางแบบ Scrollable และ Centered
         html = '<div class="scroll-table"><table class="custom-table"><thead><tr>'
         for col in df_display.columns: html += f'<th>{col}</th>'
         html += '</tr></thead><tbody>'
@@ -154,17 +152,4 @@ c1, c2, c3 = st.columns(3)
 def get_news(url):
     try:
         f = feedparser.parse(url, agent='Mozilla/5.0')
-        return [{'t': e.title, 'l': e.link, 's': re.sub('<.*?>', '', e.summary)[:100]+'...'} for e in f.entries[:3]]
-    except: return []
-
-news_list = [
-    (c1, "Precious Metals", "https://news.google.com/rss/search?q=gold+spot+market&hl=en-US&gl=US&ceid=US:en"),
-    (c2, "Digital Assets", "https://cointelegraph.com/rss"),
-    (c3, "SET & TFEX Focus", "https://news.google.com/rss/search?q=SET50+OR+TFEX&hl=th&gl=TH&ceid=TH:th")
-]
-
-for col, title, url in news_list:
-    with col:
-        st.markdown(f"### {title}")
-        for n in get_news(url):
-            st.markdown(f"""<div class="news-card"><h4>{n['t']}</h4><p class="news-snippet">{n['s']}</p><a href="{n['l']}" target="_blank" style="color:#38bdf8;text-decoration:none;font-size:12px;">READ MORE ↗️</a></div>""", unsafe_allow_html=True)
+        return [{'t': e.title, 'l': e.link, 's': re.sub('<.*?>', '', e.summary)[:100]+'...'} for e in f.
