@@ -17,9 +17,6 @@ st.markdown("""
         padding: 20px;
     }
     div[data-testid="stMetricValue"] > div { color: #ffffff !important; font-size: 42px !important; font-weight: 800 !important; }
-    .news-card { background: #1e293b; padding: 22px; border-radius: 18px; margin-bottom: 20px; border: 1px solid rgba(255, 255, 255, 0.1); }
-    .news-card h4 { color: #ffffff !important; font-size: 19px !important; font-weight: 700 !important; line-height: 1.4; }
-    .news-snippet { color: #f1f5f9 !important; font-size: 15px !important; line-height: 1.6; }
     
     .header-section { 
         background: linear-gradient(to right, #ff0080, #7928ca); 
@@ -27,10 +24,11 @@ st.markdown("""
         font-size: 32px; font-weight: 800; text-align: center; margin-bottom: 20px;
     }
     
-    .btn { padding: 8px 20px; border-radius: 30px; color: white !important; font-weight: 700; text-decoration: none; display: inline-block; margin-top: 10px; font-size: 13px; }
-    .btn-gold { background: #d97706; }
-    .btn-crypto { background: #dc2626; }
-    .btn-thai { background: #059669; }
+    /* ปรับแต่งตารางให้ดูแพงและอ่านง่าย */
+    .stDataFrame {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -38,7 +36,7 @@ st.markdown("""
 with st.sidebar:
     st.title("👨‍💼 มายนี่ Assistant")
     st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=100)
-    st.info("อัปเดตระบบทำความสะอาดตารางเรียบร้อยค่ะ ✨")
+    st.info("จัดระเบียบตารางแบบไม้ล่าสุดอยู่บนสุดเรียบร้อยค่ะ ✨")
     if st.button("🔄 อัปเดตข้อมูลทั้งหมด"):
         st.cache_data.clear()
         st.rerun()
@@ -86,7 +84,7 @@ def get_prices():
         return res
     except: return [(0,0)]*4
 
-# ---------------- ฟังก์ชันดึง Google Sheets (ฉบับปรับปรุงใหม่) ----------------
+# ---------------- ฟังก์ชันดึง Google Sheets (ฉบับแก้ Unnamed และ Sort ไม้ล่าสุด) ----------------
 @st.cache_data(ttl=300)
 def load_sheet(sheet_name):
     try:
@@ -94,16 +92,17 @@ def load_sheet(sheet_name):
         full_url = base_url + sheet_name
         df = pd.read_csv(full_url)
         
-        # 1. ลบ Column ที่เป็นค่าว่าง (NaN) ทั้งหมดทิ้งไป
-        df = df.dropna(axis=1, how='all')
+        # 1. กำจัดคอลัมน์ที่มีชื่อว่า 'Unnamed' ทิ้งไปให้หมด
+        df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
         
-        # 2. ลบ Row ที่เป็นค่าว่าง (NaN) ทั้งหมดทิ้งไป
-        df = df.dropna(axis=0, how='all')
+        # 2. ลบแถวที่เป็นค่าว่างเปล่าออก
+        df = df.dropna(how='all')
         
-        # 3. เปลี่ยนค่า NaN ที่เหลือให้กลายเป็นช่องว่าง "" เพื่อความสะอาด
-        df = df.fillna('')
-        
-        return df
+        # 3. สำหรับ Data8: จัดเรียงใหม่ให้แถวที่ 200 (ล่าสุด) มาอยู่บนสุด
+        if sheet_name == "Data8":
+            df = df.iloc[::-1].reset_index(drop=True) # กลับด้านตาราง
+            
+        return df.fillna('')
     except:
         return pd.DataFrame()
 
@@ -117,28 +116,27 @@ m4.metric("🔵 USDTHB", f"{p[3][0]:,.3f}", f"{p[3][1]:+,.3f}", delta_color="inv
 
 st.divider()
 
-# ---------------- ส่วน Google Sheets (Trading Data) ----------------
+# ---------------- ส่วน Google Sheets ----------------
 st.markdown('<div class="header-section">📊 MY TRADING PERFORMANCE</div>', unsafe_allow_html=True)
 
-col_d1, col_d2 = st.columns([1, 1.5]) # ปรับขนาดคอลัมน์ให้เหมาะสมกับข้อมูล
+col_d1, col_d2 = st.columns([1, 1.8]) # ปรับสัดส่วนให้ Data8 มีพื้นที่โชว์ข้อมูลมากขึ้น
 
 with col_d1:
     with st.container(border=True):
-        st.subheader("📈 วิเคราะห์การเทรด (Dashboard8)")
+        st.markdown("### 📈 วิเคราะห์การเทรด (Dashboard8)")
         df_dash = load_sheet("Dashboard8")
         if not df_dash.empty:
-            # ซ่อน Header ถ้าเป็น Unnamed และโชว์เฉพาะที่มีข้อมูล
-            st.dataframe(df_dash, use_container_width=True, hide_index=True)
+            st.dataframe(df_dash, use_container_width=True, hide_index=True, height=450)
         else:
             st.warning("กำลังรอข้อมูลจาก Dashboard8...")
 
 with col_d2:
     with st.container(border=True):
-        st.subheader("📝 บันทึกการเทรดล่าสุด (Data8)")
+        st.markdown("### 📝 บันทึกการเทรดล่าสุด (ไม้ล่าสุดอยู่บน)")
         df_data = load_sheet("Data8")
         if not df_data.empty:
-            # โชว์ 10 แถวสุดท้ายและเลือกเฉพาะคอลัมน์ที่มีชื่อ
-            st.dataframe(df_data.tail(15), use_container_width=True, hide_index=True)
+            # โชว์ตารางทั้งหมดเพื่อให้เลื่อนดูได้ (Scrollable)
+            st.dataframe(df_data, use_container_width=True, hide_index=True, height=450)
         else:
             st.warning("กำลังรอข้อมูลจาก Data8...")
 
