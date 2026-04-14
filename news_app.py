@@ -2,7 +2,6 @@ import streamlit as st
 import feedparser
 import re
 import yfinance as yf
-import pandas as pd
 
 # 1. ตั้งค่าหน้าตาแอป
 st.set_page_config(page_title="Carista & Trading Intelligence", layout="wide", initial_sidebar_state="collapsed")
@@ -33,16 +32,14 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# ---------------- ส่วน Sidebar ----------------
 with st.sidebar:
     st.title("👨‍💼 มายนี่ Assistant")
     st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=100)
-    st.info("ระบบอัปเกรดเพื่อรองรับ Streamlit Cloud เรียบร้อยค่ะ 🚀")
+    st.info("อัปเดตระบบข่าวทองคำผ่าน Google News เรียบร้อยค่ะ 🚀")
     if st.button("🔄 อัปเดตราคา & ข่าวเดี๋ยวนี้"):
         st.cache_data.clear()
         st.rerun()
 
-# ---------------- หัวข้อ ----------------
 st.markdown("""
     <div style="text-align: center; padding: 30px 0;">
         <h1 style="font-family: 'Inter', sans-serif; font-size: 60px; font-weight: 900; letter-spacing: -2px; margin: 0; 
@@ -56,15 +53,14 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# ---------------- ฟังก์ชันดึงข้อมูล ----------------
 def clean_html(raw_html):
     return re.sub(re.compile('<.*?>'), '', str(raw_html))
 
 @st.cache_data(ttl=600)
 def fetch_real_news(url, limit=4):
     try:
-        # เพิ่ม User-Agent เพื่อให้สำนักข่าวไม่บล็อก Cloud
-        feed = feedparser.parse(url, agent='Mozilla/5.0')
+        # ใช้ Agent ปลอมตัวเป็น Browser เพื่อให้ดึงข้อมูลได้ทุกที่
+        feed = feedparser.parse(url, agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
         results = []
         for entry in feed.entries[:limit]:
             title = entry.get('title', 'No Title')
@@ -79,24 +75,19 @@ def fetch_real_news(url, limit=4):
 @st.cache_data(ttl=60)
 def get_live_price():
     try:
-        # ใช้เครื่องมือดึงราคาที่เสถียรขึ้นสำหรับ Cloud
         tickers = ["GC=F", "BTC-USD", "^SET.BK", "THB=X"]
         data = {}
         for t in tickers:
             ticker = yf.Ticker(t)
-            # ดึงข้อมูลย้อนหลัง 5 วันเพื่อให้มั่นใจว่ามีข้อมูล (Cloud มักดึง 1d ไม่ติด)
             hist = ticker.history(period="5d")
             if not hist.empty:
                 current = hist['Close'].iloc[-1]
                 prev = hist['Open'].iloc[-1]
                 data[t] = (current, current - prev)
-            else:
-                data[t] = (0.0, 0.0)
+            else: data[t] = (0.0, 0.0)
         return data["GC=F"], data["BTC-USD"], data["^SET.BK"], data["THB=X"]
-    except:
-        return (0.0,0.0),(0.0,0.0),(0.0,0.0),(0.0,0.0)
+    except: return (0.0,0.0),(0.0,0.0),(0.0,0.0),(0.0,0.0)
 
-# ---------------- การแสดงผล ----------------
 gold_data, btc_data, set_data, thb_data = get_live_price()
 
 col_m1, col_m2, col_m3, col_m4 = st.columns(4)
@@ -117,11 +108,12 @@ st.divider()
 
 col1, col2, col3 = st.columns(3)
 
-# เปลี่ยนแหล่งข่าวทองคำเป็น CNBC เพื่อความเสถียรบน Cloud
+# ดึงข่าวทองจาก Google News แทน (เสถียรกว่ามาก)
 with col1:
     st.markdown('<div class="header-gold">PRECIOUS METALS</div>', unsafe_allow_html=True)
     with st.container(border=True):
-        for news in fetch_real_news("https://search.cnbc.com/rs/search/view.xml?partnerId=2000&keywords=gold%20price"):
+        gold_news = fetch_real_news("https://news.google.com/rss/search?q=gold+price+spot+market&hl=en-US&gl=US&ceid=US:en")
+        for news in gold_news:
             st.markdown(f"""<div class="news-card card-gold"><span class="news-date">🕒 {news['date']}</span><h4>{news['title']}</h4><p class="news-snippet">{news['snippet']}</p><a href="{news['link']}" target="_blank" class="btn btn-gold">READ STORY</a></div>""", unsafe_allow_html=True)
 
 with col2:
