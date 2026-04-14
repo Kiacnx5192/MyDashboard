@@ -7,7 +7,7 @@ import pandas as pd
 # 1. ตั้งค่าหน้าตาแอป
 st.set_page_config(page_title="Carista & Trading Intelligence", layout="wide", initial_sidebar_state="collapsed")
 
-# --- 🎨 รวมพลังความสวย CSS แบบจัดเต็ม ---
+# --- 🎨 รวมพลังความสวย CSS กลับมาเต็มพิกัด ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
@@ -30,7 +30,7 @@ st.markdown("""
         margin-bottom: 25px;
     }
 
-    /* --- 📊 สไตล์ตารางแบบ Custom (แก้ปัญหาชิดซ้าย) --- */
+    /* --- 📊 สไตล์ตารางแบบ Custom --- */
     .custom-table {
         width: 100%; border-collapse: collapse; margin-top: 15px; border-radius: 15px; overflow: hidden;
     }
@@ -49,16 +49,32 @@ st.markdown("""
     .section-header {
         background: linear-gradient(to right, #ff0080, #7928ca);
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        font-size: 28px; font-weight: 800; text-align: center; margin: 30px 0;
+        font-size: 32px; font-weight: 800; text-align: center; margin: 30px 0;
     }
 
-    /* ข่าวแบบการ์ดสวยงาม */
-    .news-card {
-        background: #1e293b; padding: 20px; border-radius: 15px; margin-bottom: 15px;
-        border-left: 5px solid #3b82f6; border-top: 1px solid rgba(255,255,255,0.1);
+    /* --- 📰 สไตล์ข่าวและปุ่ม (สีกลับมาแล้ว!) --- */
+    .header-gold { background: linear-gradient(to right, #fde047, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 24px; font-weight: 800; text-align: center; margin-bottom: 20px;}
+    .header-crypto { background: linear-gradient(to right, #fb923c, #ef4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 24px; font-weight: 800; text-align: center; margin-bottom: 20px;}
+    .header-thai { background: linear-gradient(to right, #4ade80, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 24px; font-weight: 800; text-align: center; margin-bottom: 20px;}
+
+    .news-card { 
+        background: #1e293b; padding: 20px; border-radius: 15px; margin-bottom: 15px; 
+        border-top: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
-    .news-card h4 { color: #ffffff !important; margin-bottom: 8px; font-size: 17px; }
-    .news-snippet { color: #94a3b8 !important; font-size: 14px; line-height: 1.5; }
+    .card-gold { border-left: 5px solid #f59e0b; }
+    .card-crypto { border-left: 5px solid #ef4444; }
+    .card-thai { border-left: 5px solid #10b981; }
+
+    .news-card h4 { color: #ffffff !important; margin-bottom: 8px; font-size: 16px; line-height: 1.4;}
+    .news-snippet { color: #94a3b8 !important; font-size: 13.5px; line-height: 1.5; }
+    
+    .btn { padding: 6px 18px; border-radius: 20px; color: white !important; font-weight: 700; text-decoration: none; display: inline-block; font-size: 12px; margin-top: 10px;}
+    .btn-gold { background: #d97706; }
+    .btn-crypto { background: #dc2626; }
+    .btn-thai { background: #059669; }
+    
+    /* ตัวเลข Metric ใหญ่จุใจ */
+    div[data-testid="stMetricValue"] > div { color: #ffffff !important; font-size: 42px !important; font-weight: 800 !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -66,16 +82,16 @@ st.markdown("""
 with st.sidebar:
     st.title("👨‍💼 มายนี่ Assistant")
     st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=100)
-    st.info("แก้บั๊กตารางเรียบร้อย คืนความสวยงาม 100% ค่ะ! ✨")
+    st.info("สีสันกลับมาแล้ว! เรียงไม้ที่ 1 ไว้บนสุด และจัดตารางกึ่งกลาง 100% ค่ะ ✨")
     if st.button("🔄 REFRESH DATA"):
         st.cache_data.clear()
         st.rerun()
 
 # ---------------- 👑 Main Header ----------------
 st.markdown('<h1 class="main-title">Market Intelligence</h1>', unsafe_allow_html=True)
-st.markdown('<p style="text-align:center; color:gray; letter-spacing:3px;">CARISTA TRADING DASHBOARD</p>', unsafe_allow_html=True)
+st.markdown('<p style="text-align:center; color:#94a3b8; letter-spacing:3px; font-weight:700;">CARISTA TRADING DASHBOARD</p>', unsafe_allow_html=True)
 
-# ---------------- 💰 Real-time Prices ----------------
+# ---------------- 💰 Real-time Prices (สีหัวข้อกลับมาแล้ว!) ----------------
 @st.cache_data(ttl=60)
 def get_prices():
     try:
@@ -90,10 +106,18 @@ def get_prices():
 
 p = get_prices()
 m1, m2, m3, m4 = st.columns(4)
-m1.metric("🟡 GOLD", f"{p[0][0]:,.2f}", f"{p[0][1]:+,.2f}")
-m2.metric("🟠 BTC", f"{p[1][0]:,.2f}", f"{p[1][1]:+,.2f}")
-m3.metric("🟢 SET", f"{p[2][0]:,.2f}", f"{p[2][1]:+,.2f}")
-m4.metric("🔵 USDTHB", f"{p[3][0]:,.3f}", f"{p[3][1]:+,.3f}", delta_color="inverse")
+with m1:
+    st.markdown('<p style="color:#f59e0b; font-weight:900; margin-bottom:-10px; font-size:16px;">🟡 GOLD</p>', unsafe_allow_html=True)
+    st.metric("", f"{p[0][0]:,.2f}", f"{p[0][1]:+,.2f}")
+with m2:
+    st.markdown('<p style="color:#fb923c; font-weight:900; margin-bottom:-10px; font-size:16px;">🟠 BTC</p>', unsafe_allow_html=True)
+    st.metric("", f"{p[1][0]:,.2f}", f"{p[1][1]:+,.2f}")
+with m3:
+    st.markdown('<p style="color:#4ade80; font-weight:900; margin-bottom:-10px; font-size:16px;">🟢 SET</p>', unsafe_allow_html=True)
+    st.metric("", f"{p[2][0]:,.2f}", f"{p[2][1]:+,.2f}")
+with m4:
+    st.markdown('<p style="color:#38bdf8; font-weight:900; margin-bottom:-10px; font-size:16px;">🔵 USDTHB</p>', unsafe_allow_html=True)
+    st.metric("", f"{p[3][0]:,.3f}", f"{p[3][1]:+,.3f}", delta_color="inverse")
 
 st.divider()
 
@@ -108,29 +132,28 @@ def load_sheet_data(sheet_name):
         return df.dropna(axis=1, how='all').fillna('-')
     except: return pd.DataFrame()
 
-col_left, col_right = st.columns([1, 1.8])
+col_left, col_right = st.columns([1, 2]) # ขยายฝั่งขวาให้กว้างขึ้นอีกนิด
 
 with col_left:
     st.markdown('<div class="glass-container">', unsafe_allow_html=True)
-    st.markdown("<h3 style='text-align: center;'>📈 วิเคราะห์การเทรด</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center; margin-bottom:15px;'>📈 วิเคราะห์การเทรด</h3>", unsafe_allow_html=True)
     df_dash = load_sheet_data("Dashboard8")
     if not df_dash.empty:
         html = '<table class="custom-table"><thead><tr><th>รายการ</th><th>ข้อมูลสรุป</th></tr></thead><tbody>'
         for i, row in df_dash.iloc[:, :2].iterrows():
-            # แก้ไขบั๊กตรงนี้: เปลี่ยนมาใช้ .iloc เพื่อเรียกข้อมูลตามตำแหน่งที่ถูกต้อง
-            html += f'<tr><td>{row.iloc[0]}</td><td><b>{row.iloc[1]}</b></td></tr>'
+            html += f'<tr><td>{row.iloc[0]}</td><td><b style="color:#fde047;">{row.iloc[1]}</b></td></tr>'
         html += '</tbody></table>'
         st.markdown(html, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 with col_right:
     st.markdown('<div class="glass-container">', unsafe_allow_html=True)
-    st.markdown("<h3 style='text-align: center;'>📝 บันทึกการเทรดล่าสุด</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center; margin-bottom:15px;'>📝 บันทึกการเทรด (เรียงตามลำดับ)</h3>", unsafe_allow_html=True)
     df_data = load_sheet_data("Data8")
     if not df_data.empty:
-        cols = ["ลำดับ", "Setup รูปแบบที่เข้า", "Direction Buy/Sell", "Entry ราคาเข้า", "Result ผลลัพธ์", "P/L ($) กำไร"]
-        df_display = df_data[cols] if set(cols).issubset(df_data.columns) else df_data
-        df_display = df_display.iloc[::-1]
+        # ตัดคอลัมน์ให้เหลือแค่ 8 คอลัมน์แรก (จะได้ไม่เบียดกันจนอ่านไม่ออกใน Tablet)
+        # และเรียงตามปกติตามที่กรอก (ไม้ 1 อยู่บน) ไม่ต้องสลับหัวท้ายแล้วค่ะ!
+        df_display = df_data.iloc[:, :8] 
         
         html = '<div class="scroll-table"><table class="custom-table"><thead><tr>'
         for col in df_display.columns: html += f'<th>{col}</th>'
@@ -145,7 +168,7 @@ with col_right:
 
 st.divider()
 
-# ---------------- 🌐 News Feed ----------------
+# ---------------- 🌐 News Feed (สีสันครบถ้วน) ----------------
 st.markdown('<div class="section-header">🌐 GLOBAL NEWS FEED</div>', unsafe_allow_html=True)
 c1, c2, c3 = st.columns(3)
 
@@ -156,13 +179,13 @@ def get_news(url):
     except: return []
 
 news_list = [
-    (c1, "Precious Metals", "https://news.google.com/rss/search?q=gold+spot+market&hl=en-US&gl=US&ceid=US:en"),
-    (c2, "Digital Assets", "https://cointelegraph.com/rss"),
-    (c3, "SET & TFEX Focus", "https://news.google.com/rss/search?q=SET50+OR+TFEX&hl=th&gl=TH&ceid=TH:th")
+    (c1, "PRECIOUS METALS", "https://news.google.com/rss/search?q=gold+spot+market&hl=en-US&gl=US&ceid=US:en", "header-gold", "card-gold", "btn-gold"),
+    (c2, "DIGITAL ASSETS", "https://cointelegraph.com/rss", "header-crypto", "card-crypto", "btn-crypto"),
+    (c3, "SET & TFEX FOCUS", "https://news.google.com/rss/search?q=SET50+OR+TFEX&hl=th&gl=TH&ceid=TH:th", "header-thai", "card-thai", "btn-thai")
 ]
 
-for col, title, url in news_list:
+for col, title, url, head_cls, card_cls, btn_cls in news_list:
     with col:
-        st.markdown(f"<h3 style='text-align: center;'>{title}</h3>", unsafe_allow_html=True)
+        st.markdown(f'<div class="{head_cls}">{title}</div>', unsafe_allow_html=True)
         for n in get_news(url):
-            st.markdown(f"""<div class="news-card"><h4>{n['t']}</h4><p class="news-snippet">{n['s']}</p><a href="{n['l']}" target="_blank" style="color:#38bdf8;text-decoration:none;font-size:12px;font-weight:bold;">อ่านต่อ ↗️</a></div>""", unsafe_allow_html=True)
+            st.markdown(f"""<div class="news-card {card_cls}"><h4>{n['t']}</h4><p class="news-snippet">{n['s']}</p><a href="{n['l']}" target="_blank" class="btn {btn_cls}">READ STORY</a></div>""", unsafe_allow_html=True)
