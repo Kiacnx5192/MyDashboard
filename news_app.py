@@ -7,7 +7,7 @@ import pandas as pd
 # 1. ตั้งค่าหน้าตาแอป
 st.set_page_config(page_title="Carista & Trading Intelligence", layout="wide", initial_sidebar_state="collapsed")
 
-# --- 🎨 CSS ระดับพรีเมียม (ทวงคืนความสวยงามทุกอณู) ---
+# --- 🎨 CSS ระดับพรีเมียม (อัปเกรดสีหัวข้อ) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
@@ -18,7 +18,7 @@ st.markdown("""
         color: #ffffff; font-family: 'Inter', sans-serif; 
     }
     
-    /* กล่องกระจก (Glassmorphism) ใช้กับ st.container */
+    /* กล่องกระจก (Glassmorphism) */
     [data-testid="stVerticalBlockBorderWrapper"] { 
         background: rgba(30, 41, 59, 0.5) !important;
         backdrop-filter: blur(10px) !important;
@@ -28,7 +28,7 @@ st.markdown("""
         box-shadow: 0 8px 32px 0 rgba(0,0,0,0.3) !important;
     }
 
-    /* 1. หัวข้อระดับหลัก (Main Title) */
+    /* หัวข้อระดับหลัก (Main Title) */
     .main-title {
         font-size: 60px; font-weight: 900; text-align: center; margin-bottom: 0px;
         background: linear-gradient(to right, #ff0080, #7928ca, #0070f3);
@@ -36,15 +36,24 @@ st.markdown("""
         text-shadow: 0 4px 20px rgba(121, 40, 202, 0.3);
     }
 
-    /* 2. หัวข้อระดับรอง (Section Title) ให้ดูแตกต่าง ไม่ซ้ำซาก */
-    .section-title {
-        font-size: 24px; font-weight: 800; text-align: center; color: #f8fafc;
-        letter-spacing: 2px; text-transform: uppercase; 
-        margin: 40px 0 20px 0; padding-bottom: 15px;
-        border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    /* --- สีสันหัวข้อ Section ใหม่สุดปัง --- */
+    .section-perf {
+        font-size: 28px; font-weight: 900; text-align: center;
+        background: linear-gradient(to right, #f59e0b, #e879f9); /* ทองไปชมพู */
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        letter-spacing: 3px; margin: 40px 0 20px 0; padding-bottom: 10px;
+        border-bottom: 2px dashed rgba(232, 121, 249, 0.4);
+    }
+    
+    .section-news {
+        font-size: 28px; font-weight: 900; text-align: center;
+        background: linear-gradient(to right, #06b6d4, #4ade80); /* ฟ้าไปเขียวนีออน */
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        letter-spacing: 3px; margin: 40px 0 20px 0; padding-bottom: 10px;
+        border-bottom: 2px dashed rgba(74, 222, 128, 0.4);
     }
 
-    /* 3. หัวข้อย่อยในกล่อง */
+    /* หัวข้อย่อยในกล่อง */
     .sub-header { color: #38bdf8; text-align: center; font-size: 18px; font-weight: 800; margin-bottom: 15px; }
 
     /* --- 📊 สไตล์ตาราง (กลางเป๊ะ สูงเท่ากัน) --- */
@@ -65,7 +74,7 @@ st.markdown("""
     }
     .custom-table tr:hover td { background: rgba(56, 189, 248, 0.1); }
 
-    /* --- 📰 สไตล์ข่าว (สีกลับมาครบ!) --- */
+    /* --- 📰 สไตล์ข่าว --- */
     .news-card {
         background: rgba(15, 23, 42, 0.6); padding: 18px; border-radius: 12px; margin-bottom: 15px;
         border-top: 1px solid rgba(255,255,255,0.05); box-shadow: 0 4px 6px rgba(0,0,0,0.2);
@@ -92,7 +101,7 @@ st.markdown("""
 with st.sidebar:
     st.title("👨‍💼 มายนี่ Assistant")
     st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=100)
-    st.info("ลบกล่องปริศนา คืนสีสัน และเรียงตาราง 1, 2, 3 ให้แล้วค่ะ! 🚀")
+    st.info("อัปเกรดสีหัวข้อ Section ใหม่ และเอาวงเล็บออกให้เรียบร้อยค่ะ! 🚀")
     if st.button("🔄 REFRESH DATA"):
         st.cache_data.clear()
         st.rerun()
@@ -130,7 +139,7 @@ with m4:
     st.metric("", f"{p[3][0]:,.3f}", f"{p[3][1]:+,.3f}", delta_color="inverse")
 
 # ---------------- 📊 Trading Performance ----------------
-st.markdown('<div class="section-title">📊 TRADING PERFORMANCE</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-perf">📊 TRADING PERFORMANCE</div>', unsafe_allow_html=True)
 
 @st.cache_data(ttl=300)
 def load_sheet_data(sheet_name):
@@ -143,23 +152,21 @@ def load_sheet_data(sheet_name):
 col_left, col_right = st.columns([1, 1.8])
 
 with col_left:
-    with st.container(border=True): # ใช้ container ธรรมชาติของ Streamlit
+    with st.container(border=True): 
         st.markdown('<div class="sub-header">📈 วิเคราะห์การเทรด</div>', unsafe_allow_html=True)
         df_dash = load_sheet_data("Dashboard8")
         if not df_dash.empty:
             html = '<div class="table-wrapper"><table class="custom-table"><thead><tr><th>รายการวิเคราะห์</th><th>ข้อมูลสรุป</th></tr></thead><tbody>'
             for i, row in df_dash.iloc[:, :2].iterrows():
-                # ทำให้ตัวเลขสรุปโดดเด่นขึ้น
                 html += f'<tr><td>{row.iloc[0]}</td><td><b style="color:#fde047;">{row.iloc[1]}</b></td></tr>'
             html += '</tbody></table></div>'
             st.markdown(html, unsafe_allow_html=True)
 
 with col_right:
     with st.container(border=True):
-        st.markdown('<div class="sub-header">📝 บันทึกการเทรด (เรียง 1, 2, 3...)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="sub-header">📝 บันทึกการเทรดล่าสุด</div>', unsafe_allow_html=True)
         df_data = load_sheet_data("Data8")
         if not df_data.empty:
-            # ดึง 8 คอลัมน์แรก และ "ไม่สลับหัวท้าย" แล้วค่ะ! เรียง 1, 2, 3 ตามชีทเลย
             df_display = df_data.iloc[:, :8] 
             
             html = '<div class="table-wrapper"><table class="custom-table"><thead><tr>'
@@ -168,7 +175,6 @@ with col_right:
             for _, row in df_display.iterrows():
                 html += '<tr>'
                 for val in row: 
-                    # ไฮไลต์สี Win/Loss อัตโนมัติ
                     color = "#4ade80" if str(val).strip().lower() == "win" else "#f87171" if str(val).strip().lower() == "loss" else "inherit"
                     html += f'<td style="color:{color};">{val}</td>'
                 html += '</tr>'
@@ -176,7 +182,7 @@ with col_right:
             st.markdown(html, unsafe_allow_html=True)
 
 # ---------------- 🌐 News Feed ----------------
-st.markdown('<div class="section-title">🌐 GLOBAL NEWS FEED</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-news">🌐 GLOBAL NEWS FEED</div>', unsafe_allow_html=True)
 c1, c2, c3 = st.columns(3)
 
 def get_news(url):
@@ -184,7 +190,7 @@ def get_news(url):
         f = feedparser.parse(url, agent='Mozilla/5.0')
         results = []
         for e in f.entries[:3]:
-            date_str = e.get('published', e.get('pubDate', 'Recent'))[:25] # ดึงเวลาข่าวกลับมา
+            date_str = e.get('published', e.get('pubDate', 'Recent'))[:25] 
             snip = re.sub('<.*?>', '', e.get('summary', ''))[:100] + '...'
             results.append({'t': e.title, 'l': e.link, 'd': date_str, 's': snip})
         return results
@@ -198,7 +204,6 @@ news_list = [
 
 for col, title, url, card_cls, btn_cls in news_list:
     with col:
-        # หัวข้อข่าวก็ทำให้ดูแตกต่างจากหัวข้ออื่นๆ
         st.markdown(f"<h3 style='text-align: center; color: white; font-size:18px; margin-bottom:15px;'>{title}</h3>", unsafe_allow_html=True)
         for n in get_news(url):
             st.markdown(f"""
