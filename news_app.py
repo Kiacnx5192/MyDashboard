@@ -21,7 +21,6 @@ st.markdown("""
     .news-card h4 { color: #ffffff !important; font-size: 19px !important; font-weight: 700 !important; line-height: 1.4; }
     .news-snippet { color: #f1f5f9 !important; font-size: 15px !important; line-height: 1.6; }
     
-    /* Header สีสันสดใส */
     .header-section { 
         background: linear-gradient(to right, #ff0080, #7928ca); 
         -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
@@ -32,9 +31,6 @@ st.markdown("""
     .btn-gold { background: #d97706; }
     .btn-crypto { background: #dc2626; }
     .btn-thai { background: #059669; }
-    
-    /* ปรับแต่งตาราง Google Sheets ให้ดู Modern */
-    .stDataFrame { border-radius: 15px; overflow: hidden; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -42,7 +38,7 @@ st.markdown("""
 with st.sidebar:
     st.title("👨‍💼 มายนี่ Assistant")
     st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=100)
-    st.info("เชื่อมต่อ Google Sheets สำเร็จแล้วค่ะ! 🚀")
+    st.info("อัปเดตระบบทำความสะอาดตารางเรียบร้อยค่ะ ✨")
     if st.button("🔄 อัปเดตข้อมูลทั้งหมด"):
         st.cache_data.clear()
         st.rerun()
@@ -55,9 +51,6 @@ st.markdown("""
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
             Market Intelligence
         </h1>
-        <p style="color: #ffffff; font-size: 16px; letter-spacing: 5px; text-transform: uppercase; font-weight: 700; margin-top: 15px;">
-            Trading Performance & News Dashboard
-        </p>
     </div>
 """, unsafe_allow_html=True)
 
@@ -93,14 +86,24 @@ def get_prices():
         return res
     except: return [(0,0)]*4
 
-# ---------------- ฟังก์ชันดึง Google Sheets ----------------
+# ---------------- ฟังก์ชันดึง Google Sheets (ฉบับปรับปรุงใหม่) ----------------
 @st.cache_data(ttl=300)
 def load_sheet(sheet_name):
     try:
-        # ใช้ URL ที่คุณเกี๊ยะส่งมา แปลงเป็น CSV Export สำหรับแผ่นงานระบุชื่อ
         base_url = "https://docs.google.com/spreadsheets/d/1uxDki739Juxrsu1HfYZAsmDVZETRtd-1liaw6LT8P8w/gviz/tq?tqx=out:csv&sheet="
         full_url = base_url + sheet_name
-        return pd.read_csv(full_url)
+        df = pd.read_csv(full_url)
+        
+        # 1. ลบ Column ที่เป็นค่าว่าง (NaN) ทั้งหมดทิ้งไป
+        df = df.dropna(axis=1, how='all')
+        
+        # 2. ลบ Row ที่เป็นค่าว่าง (NaN) ทั้งหมดทิ้งไป
+        df = df.dropna(axis=0, how='all')
+        
+        # 3. เปลี่ยนค่า NaN ที่เหลือให้กลายเป็นช่องว่าง "" เพื่อความสะอาด
+        df = df.fillna('')
+        
+        return df
     except:
         return pd.DataFrame()
 
@@ -117,26 +120,27 @@ st.divider()
 # ---------------- ส่วน Google Sheets (Trading Data) ----------------
 st.markdown('<div class="header-section">📊 MY TRADING PERFORMANCE</div>', unsafe_allow_html=True)
 
-col_d1, col_d2 = st.columns([1, 1])
+col_d1, col_d2 = st.columns([1, 1.5]) # ปรับขนาดคอลัมน์ให้เหมาะสมกับข้อมูล
 
 with col_d1:
     with st.container(border=True):
         st.subheader("📈 วิเคราะห์การเทรด (Dashboard8)")
         df_dash = load_sheet("Dashboard8")
         if not df_dash.empty:
+            # ซ่อน Header ถ้าเป็น Unnamed และโชว์เฉพาะที่มีข้อมูล
             st.dataframe(df_dash, use_container_width=True, hide_index=True)
         else:
-            st.warning("ไม่สามารถดึงข้อมูลจาก Dashboard8 ได้ค่ะ")
+            st.warning("กำลังรอข้อมูลจาก Dashboard8...")
 
 with col_d2:
     with st.container(border=True):
         st.subheader("📝 บันทึกการเทรดล่าสุด (Data8)")
         df_data = load_sheet("Data8")
         if not df_data.empty:
-            # โชว์เฉพาะ 10 ไม้ล่าสุด
-            st.dataframe(df_data.tail(10), use_container_width=True, hide_index=True)
+            # โชว์ 10 แถวสุดท้ายและเลือกเฉพาะคอลัมน์ที่มีชื่อ
+            st.dataframe(df_data.tail(15), use_container_width=True, hide_index=True)
         else:
-            st.warning("ไม่สามารถดึงข้อมูลจาก Data8 ได้ค่ะ")
+            st.warning("กำลังรอข้อมูลจาก Data8...")
 
 st.divider()
 
