@@ -152,4 +152,17 @@ c1, c2, c3 = st.columns(3)
 def get_news(url):
     try:
         f = feedparser.parse(url, agent='Mozilla/5.0')
-        return [{'t': e.title, 'l': e.link, 's': re.sub('<.*?>', '', e.summary)[:100]+'...'} for e in f.
+        return [{'t': e.title, 'l': e.link, 's': re.sub('<.*?>', '', e.summary)[:100]+'...'} for e in f.entries[:3]]
+    except: return []
+
+news_list = [
+    (c1, "Precious Metals", "https://news.google.com/rss/search?q=gold+spot+market&hl=en-US&gl=US&ceid=US:en"),
+    (c2, "Digital Assets", "https://cointelegraph.com/rss"),
+    (c3, "SET & TFEX Focus", "https://news.google.com/rss/search?q=SET50+OR+TFEX&hl=th&gl=TH&ceid=TH:th")
+]
+
+for col, title, url in news_list:
+    with col:
+        st.markdown(f"<h3 style='text-align: center;'>{title}</h3>", unsafe_allow_html=True)
+        for n in get_news(url):
+            st.markdown(f"""<div class="news-card"><h4>{n['t']}</h4><p class="news-snippet">{n['s']}</p><a href="{n['l']}" target="_blank" style="color:#38bdf8;text-decoration:none;font-size:12px;font-weight:bold;">อ่านต่อ ↗️</a></div>""", unsafe_allow_html=True)
