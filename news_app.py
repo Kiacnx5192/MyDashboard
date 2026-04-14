@@ -2,6 +2,7 @@ import streamlit as st
 import feedparser
 import re
 import yfinance as yf
+import pandas as pd
 
 # 1. ตั้งค่าหน้าตาแอป
 st.set_page_config(page_title="Carista & Trading Intelligence", layout="wide", initial_sidebar_state="collapsed")
@@ -19,27 +20,34 @@ st.markdown("""
     .news-card { background: #1e293b; padding: 22px; border-radius: 18px; margin-bottom: 20px; border: 1px solid rgba(255, 255, 255, 0.1); }
     .news-card h4 { color: #ffffff !important; font-size: 19px !important; font-weight: 700 !important; line-height: 1.4; }
     .news-snippet { color: #f1f5f9 !important; font-size: 15px !important; line-height: 1.6; }
-    .header-gold { background: linear-gradient(to right, #fde047, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 26px; font-weight: 800; text-align: center; margin-bottom: 20px;}
-    .header-crypto { background: linear-gradient(to right, #fb923c, #ef4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 26px; font-weight: 800; text-align: center; margin-bottom: 20px;}
-    .header-thai { background: linear-gradient(to right, #4ade80, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 26px; font-weight: 800; text-align: center; margin-bottom: 20px;}
-    .card-gold { border-left: 6px solid #f59e0b; }
-    .card-crypto { border-left: 6px solid #ef4444; }
-    .card-thai { border-left: 6px solid #10b981; }
+    
+    /* Header สีสันสดใส */
+    .header-section { 
+        background: linear-gradient(to right, #ff0080, #7928ca); 
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+        font-size: 32px; font-weight: 800; text-align: center; margin-bottom: 20px;
+    }
+    
     .btn { padding: 8px 20px; border-radius: 30px; color: white !important; font-weight: 700; text-decoration: none; display: inline-block; margin-top: 10px; font-size: 13px; }
     .btn-gold { background: #d97706; }
     .btn-crypto { background: #dc2626; }
     .btn-thai { background: #059669; }
+    
+    /* ปรับแต่งตาราง Google Sheets ให้ดู Modern */
+    .stDataFrame { border-radius: 15px; overflow: hidden; }
     </style>
     """, unsafe_allow_html=True)
 
+# ---------------- ส่วน Sidebar ----------------
 with st.sidebar:
     st.title("👨‍💼 มายนี่ Assistant")
     st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=100)
-    st.info("อัปเดตระบบข่าวทองคำผ่าน Google News เรียบร้อยค่ะ 🚀")
-    if st.button("🔄 อัปเดตราคา & ข่าวเดี๋ยวนี้"):
+    st.info("เชื่อมต่อ Google Sheets สำเร็จแล้วค่ะ! 🚀")
+    if st.button("🔄 อัปเดตข้อมูลทั้งหมด"):
         st.cache_data.clear()
         st.rerun()
 
+# ---------------- ส่วนหัวข้อหลัก ----------------
 st.markdown("""
     <div style="text-align: center; padding: 30px 0;">
         <h1 style="font-family: 'Inter', sans-serif; font-size: 60px; font-weight: 900; letter-spacing: -2px; margin: 0; 
@@ -48,82 +56,103 @@ st.markdown("""
             Market Intelligence
         </h1>
         <p style="color: #ffffff; font-size: 16px; letter-spacing: 5px; text-transform: uppercase; font-weight: 700; margin-top: 15px;">
-            Global Trading • Carista Dashboard
+            Trading Performance & News Dashboard
         </p>
     </div>
 """, unsafe_allow_html=True)
 
+# ---------------- ฟังก์ชันดึงราคาและข่าว ----------------
 def clean_html(raw_html):
     return re.sub(re.compile('<.*?>'), '', str(raw_html))
 
 @st.cache_data(ttl=600)
-def fetch_real_news(url, limit=4):
+def fetch_news(url, limit=4):
     try:
-        # ใช้ Agent ปลอมตัวเป็น Browser เพื่อให้ดึงข้อมูลได้ทุกที่
-        feed = feedparser.parse(url, agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
+        feed = feedparser.parse(url, agent='Mozilla/5.0')
         results = []
         for entry in feed.entries[:limit]:
-            title = entry.get('title', 'No Title')
-            link = entry.get('link', '#')
-            date = entry.get('published', entry.get('pubDate', 'Recent'))
-            summary = clean_html(entry.get('summary', ''))
-            snippet = summary[:110] + "..." if len(summary) > 110 else summary
-            results.append({'title': title, 'link': link, 'date': date[:25], 'snippet': snippet})
+            results.append({
+                'title': entry.get('title', 'No Title'),
+                'link': entry.get('link', '#'),
+                'date': entry.get('published', 'Recent')[:25],
+                'snippet': clean_html(entry.get('summary', ''))[:110] + "..."
+            })
         return results
     except: return []
 
 @st.cache_data(ttl=60)
-def get_live_price():
+def get_prices():
     try:
         tickers = ["GC=F", "BTC-USD", "^SET.BK", "THB=X"]
-        data = {}
+        res = []
         for t in tickers:
-            ticker = yf.Ticker(t)
-            hist = ticker.history(period="5d")
-            if not hist.empty:
-                current = hist['Close'].iloc[-1]
-                prev = hist['Open'].iloc[-1]
-                data[t] = (current, current - prev)
-            else: data[t] = (0.0, 0.0)
-        return data["GC=F"], data["BTC-USD"], data["^SET.BK"], data["THB=X"]
-    except: return (0.0,0.0),(0.0,0.0),(0.0,0.0),(0.0,0.0)
+            h = yf.Ticker(t).history(period="5d")
+            c = h['Close'].iloc[-1]
+            d = c - h['Open'].iloc[-1]
+            res.append((c, d))
+        return res
+    except: return [(0,0)]*4
 
-gold_data, btc_data, set_data, thb_data = get_live_price()
+# ---------------- ฟังก์ชันดึง Google Sheets ----------------
+@st.cache_data(ttl=300)
+def load_sheet(sheet_name):
+    try:
+        # ใช้ URL ที่คุณเกี๊ยะส่งมา แปลงเป็น CSV Export สำหรับแผ่นงานระบุชื่อ
+        base_url = "https://docs.google.com/spreadsheets/d/1uxDki739Juxrsu1HfYZAsmDVZETRtd-1liaw6LT8P8w/gviz/tq?tqx=out:csv&sheet="
+        full_url = base_url + sheet_name
+        return pd.read_csv(full_url)
+    except:
+        return pd.DataFrame()
 
-col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-with col_m1:
-    st.markdown('<p style="color:#f59e0b; font-weight:900; margin-bottom:-10px;">🟡 XAUUSD (GOLD)</p>', unsafe_allow_html=True)
-    st.metric("", f"{gold_data[0]:,.2f}", f"{gold_data[1]:+,.2f}")
-with col_m2:
-    st.markdown('<p style="color:#fb923c; font-weight:900; margin-bottom:-10px;">🟠 BTC/USD (CRYPTO)</p>', unsafe_allow_html=True)
-    st.metric("", f"{btc_data[0]:,.2f}", f"{btc_data[1]:+,.2f}")
-with col_m3:
-    st.markdown('<p style="color:#4ade80; font-weight:900; margin-bottom:-10px;">🟢 SET INDEX (THAI)</p>', unsafe_allow_html=True)
-    st.metric("", f"{set_data[0]:,.2f}", f"{set_data[1]:+,.2f}")
-with col_m4:
-    st.markdown('<p style="color:#38bdf8; font-weight:900; margin-bottom:-10px;">🔵 USDTHB (FX)</p>', unsafe_allow_html=True)
-    st.metric("", f"{thb_data[0]:,.3f}", f"{thb_data[1]:+,.3f}", delta_color="inverse")
+# ---------------- แสดงผล Metric ราคา ----------------
+p = get_prices()
+m1, m2, m3, m4 = st.columns(4)
+m1.metric("🟡 GOLD", f"{p[0][0]:,.2f}", f"{p[0][1]:+,.2f}")
+m2.metric("🟠 BTC", f"{p[1][0]:,.2f}", f"{p[1][1]:+,.2f}")
+m3.metric("🟢 SET", f"{p[2][0]:,.2f}", f"{p[2][1]:+,.2f}")
+m4.metric("🔵 USDTHB", f"{p[3][0]:,.3f}", f"{p[3][1]:+,.3f}", delta_color="inverse")
 
 st.divider()
 
-col1, col2, col3 = st.columns(3)
+# ---------------- ส่วน Google Sheets (Trading Data) ----------------
+st.markdown('<div class="header-section">📊 MY TRADING PERFORMANCE</div>', unsafe_allow_html=True)
 
-# ดึงข่าวทองจาก Google News แทน (เสถียรกว่ามาก)
-with col1:
-    st.markdown('<div class="header-gold">PRECIOUS METALS</div>', unsafe_allow_html=True)
-    with st.container(border=True):
-        gold_news = fetch_real_news("https://news.google.com/rss/search?q=gold+price+spot+market&hl=en-US&gl=US&ceid=US:en")
-        for news in gold_news:
-            st.markdown(f"""<div class="news-card card-gold"><span class="news-date">🕒 {news['date']}</span><h4>{news['title']}</h4><p class="news-snippet">{news['snippet']}</p><a href="{news['link']}" target="_blank" class="btn btn-gold">READ STORY</a></div>""", unsafe_allow_html=True)
+col_d1, col_d2 = st.columns([1, 1])
 
-with col2:
-    st.markdown('<div class="header-crypto">DIGITAL ASSETS</div>', unsafe_allow_html=True)
+with col_d1:
     with st.container(border=True):
-        for news in fetch_real_news("https://cointelegraph.com/rss"):
-            st.markdown(f"""<div class="news-card card-crypto"><span class="news-date">🕒 {news['date']}</span><h4>{news['title']}</h4><p class="news-snippet">{news['snippet']}</p><a href="{news['link']}" target="_blank" class="btn btn-crypto">READ STORY</a></div>""", unsafe_allow_html=True)
+        st.subheader("📈 วิเคราะห์การเทรด (Dashboard8)")
+        df_dash = load_sheet("Dashboard8")
+        if not df_dash.empty:
+            st.dataframe(df_dash, use_container_width=True, hide_index=True)
+        else:
+            st.warning("ไม่สามารถดึงข้อมูลจาก Dashboard8 ได้ค่ะ")
 
-with col3:
-    st.markdown('<div class="header-thai">SET & TFEX INDEX</div>', unsafe_allow_html=True)
+with col_d2:
     with st.container(border=True):
-        for news in fetch_real_news("https://news.google.com/rss/search?q=SET50+OR+TFEX&hl=th&gl=TH&ceid=TH:th"):
-            st.markdown(f"""<div class="news-card card-thai"><span class="news-date">🕒 {news['date']}</span><h4>{news['title']}</h4><p class="news-snippet">{news['snippet']}</p><a href="{news['link']}" target="_blank" class="btn btn-thai">READ STORY</a></div>""", unsafe_allow_html=True)
+        st.subheader("📝 บันทึกการเทรดล่าสุด (Data8)")
+        df_data = load_sheet("Data8")
+        if not df_data.empty:
+            # โชว์เฉพาะ 10 ไม้ล่าสุด
+            st.dataframe(df_data.tail(10), use_container_width=True, hide_index=True)
+        else:
+            st.warning("ไม่สามารถดึงข้อมูลจาก Data8 ได้ค่ะ")
+
+st.divider()
+
+# ---------------- ส่วนข่าว ----------------
+st.markdown('<div class="header-section">🌐 GLOBAL NEWS FEED</div>', unsafe_allow_html=True)
+c1, c2, c3 = st.columns(3)
+
+news_feeds = [
+    (c1, "Precious Metals", "https://news.google.com/rss/search?q=gold+spot+market&hl=en-US&gl=US&ceid=US:en", "btn-gold"),
+    (c2, "Digital Assets", "https://cointelegraph.com/rss", "btn-crypto"),
+    (c3, "SET & TFEX Focus", "https://news.google.com/rss/search?q=SET50+OR+TFEX&hl=th&gl=TH&ceid=TH:th", "btn-thai")
+]
+
+for col, title, url, btn_class in news_feeds:
+    with col:
+        with st.container(border=True):
+            st.markdown(f"### {title}")
+            for n in fetch_news(url):
+                st.markdown(f"""<div class="news-card"><span class="news-date">🕒 {n['date']}</span><h4>{n['title']}</h4><p class="news-snippet">{n['snippet']}</p><a href="{n['link']}" target="_blank" class="btn {btn_class}">READ STORY</a></div>""", unsafe_allow_html=True)
