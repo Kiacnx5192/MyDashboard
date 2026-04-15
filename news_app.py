@@ -17,7 +17,7 @@ def get_gspread_client():
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     return gspread.authorize(creds)
 
-# --- 🎨 CSS แก้ไขปุ่มและจัดทรง ---
+# --- 🎨 CSS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
@@ -28,7 +28,6 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.1) !important; border-radius: 16px !important; padding: 20px !important;
     }
 
-    /* ตกแต่งปุ่ม Submit ให้เด่นชัด ไม่กลืนกับพื้นหลัง */
     div[data-testid="stFormSubmitButton"] button {
         background: linear-gradient(to right, #0ea5e9, #3b82f6) !important;
         color: white !important; font-weight: 800 !important;
@@ -103,25 +102,38 @@ with m4:
 # ---------------- 📊 Trading Performance ----------------
 st.markdown('<div class="section-perf">📊 TRADING PERFORMANCE</div>', unsafe_allow_html=True)
 
-# ⚠️ อัปเกรด: ระบบค้นหาหัวตารางอัจฉริยะ (หลบชื่อชีทที่แทรกอยู่ด้านบน)
+# ⚠️ แยกฟังก์ชันดึงตารางซ้าย (Dashboard) ให้ทำงานอิสระ ไม่ไปกวนตารางอื่น
 @st.cache_data(ttl=10)
-def load_sheet_data(sheet_name):
+def load_dashboard_data():
+    try:
+        gc = get_gspread_client()
+        sh = gc.open_by_key("1uxDki739Juxrsu1HfYZAsmDVZETRtd-1liaw6LT8P8w")
+        worksheet = sh.worksheet("Dashboard8")
+        data = worksheet.get_all_values()
+        if not data: return pd.DataFrame()
+        df = pd.DataFrame(data[1:], columns=data[0]) 
+        return df.replace('', '-').dropna(axis=1, how='all')
+    except Exception as e:
+        return pd.DataFrame()
+
+# ⚠️ ฟังก์ชันดึงตารางขวา (Data8) พร้อมสแกนหาหัวตารางอัจฉริยะ
+@st.cache_data(ttl=10)
+def load_log_data():
     try:
         gc = get_gspread_client()
         sh = gc.open_by_key("1uxDki739Juxrsu1HfYZAsmDVZETRtd-1liaw6LT8P8w") 
-        worksheet = sh.worksheet(sheet_name)
+        worksheet = sh.worksheet("Data8")
         data = worksheet.get_all_values()
         if not data: return pd.DataFrame()
         
-        # สแกนหาบรรทัดที่เป็นหัวตารางจริงๆ (หาคำว่า ลำดับ หรือ รายการ)
         header_idx = 0
-        for i, row in enumerate(data[:5]): 
-            if any(keyword in str(cell) for cell in row for keyword in ["ลำดับ", "รายการ", "Setup"]):
+        for i, row in enumerate(data[:10]): 
+            if any("ลำดับ" in str(cell) for cell in row):
                 header_idx = i
                 break
                 
         df = pd.DataFrame(data[header_idx+1:], columns=data[header_idx]) 
-        df = df.loc[:, df.columns != ''] # ลบคอลัมน์ขยะที่ชื่อว่างๆ ทิ้ง
+        df = df.loc[:, df.columns != ''] 
         return df.replace('', '-').dropna(axis=1, how='all')
     except Exception as e:
         return pd.DataFrame() 
@@ -131,27 +143,37 @@ col_left, col_right = st.columns([1, 1.8])
 with col_left:
     with st.container(border=True):
         st.markdown('<div class="sub-header">📈 วิเคราะห์การเทรด</div>', unsafe_allow_html=True)
-        df_dash = load_sheet_data("Dashboard8")
+        df_dash = load_dashboard_data()
         if not df_dash.empty and len(df_dash.columns) >= 2:
             html = '<div class="table-wrapper"><table class="custom-table"><thead><tr><th>รายการวิเคราะห์</th><th>ข้อมูลสรุป</th></tr></thead><tbody>'
             for _, row in df_dash.iloc[:, :2].iterrows():
-                # กรองพวกบรรทัดขยะที่ข้อมูลมีแค่ขีด (-) ออกไปให้ดูสะอาดตา
                 if str(row.iloc[0]).strip() != '-' and str(row.iloc[0]).strip() != '':
                     html += f'<tr><td>{row.iloc[0]}</td><td><b style="color:#fde047;">{row.iloc[1]}</b></td></tr>'
             html += '</tbody></table></div>'
             st.markdown(html, unsafe_allow_html=True)
+        else:
+            st.write("กำลังรอข้อมูล...")
 
 with col_right:
+    # --- 📝 ส่วนบันทึกข้อมูลแบบเต็มสตรีม (แก้ไขให้ตรงกับ Sheet จริง) ---
     with st.expander("➕ บันทึกไม้เทรดใหม่ (Write to Sheet)", expanded=False):
         with st.form("trade_form", clear_on_submit=True):
+            # แถวที่ 1
             f1, f2, f3 = st.columns(3)
-            setup = f1.selectbox("Setup", ["30/30/40", "Breakout", "Retest", "Price Action"])
+            setup = f1.text_input("Setup รูปแบบที่เข้า", placeholder="เช่น 30/30/40")
             direction = f2.selectbox("Direction", ["Buy", "Sell"])
-            entry = f3.number_input("Entry Price", format="%.5f")
+            result = f3.selectbox("Result ผลลัพธ์", ["Pending", "Win", "Loss", "กันทุน"])
             
-            f4, f5 = st.columns(2)
-            result = f4.selectbox("Result", ["Pending", "Win", "Loss", "กันทุน"])
-            pl = f5.number_input("P/L ($)", format="%.2f")
+            # แถวที่ 2
+            f4, f5, f6 = st.columns(3)
+            entry = f4.number_input("Entry ราคาเข้า", format="%.5f")
+            sl = f5.number_input("SL ราคาตัดขาดทุน", format="%.5f")
+            tp = f6.number_input("TP ราคาทำกำไร", format="%.5f")
+            
+            # แถวที่ 3
+            f7, f8 = st.columns(2)
+            exit_price = f7.number_input("Exit Price ราคาออกจริง", format="%.5f")
+            pl = f8.number_input("P/L ($) กำไร/ขาดทุน", format="%.2f")
             
             submit = st.form_submit_button("🚀 บันทึกไม้เทรดลง Google Sheet")
             
@@ -161,12 +183,13 @@ with col_right:
                     sh = gc.open_by_key("1uxDki739Juxrsu1HfYZAsmDVZETRtd-1liaw6LT8P8w")
                     wks = sh.worksheet("Data8")
                     
-                    # นับเฉพาะแถวที่มีข้อมูลจริงๆ เพื่อรันเลขลำดับให้ถูกต้อง
+                    # รันเลขลำดับอัตโนมัติ
                     all_vals = wks.get_all_values()
                     total_rows = len([r for r in all_vals if any(str(c).strip() for c in r)])
+                    # ถ้าแถวแรกๆ เป็นหัวข้อ เลขลำดับอาจจะต้องลบออกนิดหน่อย แต่ใช้ไปก่อนได้ค่ะ
                     
-                    # ข้อมูลที่จะส่งเข้า Sheet
-                    new_row = [total_rows, setup, direction, entry, "-", "-", "-", result, pl]
+                    # จัดเรียงข้อมูลให้ตรงกับคอลัมน์ [ลำดับ, Setup, Direction, Entry, SL, TP, Exit, Result, P/L]
+                    new_row = [total_rows, setup, direction, entry, sl, tp, exit_price, result, pl]
                     wks.append_row(new_row)
                     st.success("บันทึกข้อมูลสำเร็จ! กด REFRESH DATA ที่ Sidebar เพื่อดูอัปเดตค่ะ ✨")
                     st.cache_data.clear()
@@ -175,15 +198,13 @@ with col_right:
 
     with st.container(border=True):
         st.markdown('<div class="sub-header">📝 บันทึกการเทรดล่าสุด</div>', unsafe_allow_html=True)
-        df_data = load_sheet_data("Data8")
+        df_data = load_log_data()
         if not df_data.empty:
-            # ดึง 8 คอลัมน์แรกเพื่อความพอดีของหน้าจอ
-            df_display = df_data.iloc[:, :8] if len(df_data.columns) >= 8 else df_data
+            df_display = df_data.iloc[:, :9] if len(df_data.columns) >= 9 else df_data
             html = '<div class="table-wrapper"><table class="custom-table"><thead><tr>'
             for col in df_display.columns: html += f'<th>{col}</th>'
             html += '</tr></thead><tbody>'
             for _, row in df_display.iterrows():
-                # กรองบรรทัดว่างๆ ออกไป
                 if str(row.iloc[0]).strip() != '-' and str(row.iloc[0]).strip() != '':
                     html += '<tr>'
                     for val in row:
