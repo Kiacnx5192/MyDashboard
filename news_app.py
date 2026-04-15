@@ -7,7 +7,7 @@ import pandas as pd
 # 1. ตั้งค่าหน้าตาแอป
 st.set_page_config(page_title="Carista & Trading Intelligence", layout="wide", initial_sidebar_state="collapsed")
 
-# --- 🎨 CSS ระดับพรีเมียม (อัปเกรดสีหัวข้อ) ---
+# --- 🎨 CSS ระดับพรีเมียม ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
@@ -36,10 +36,10 @@ st.markdown("""
         text-shadow: 0 4px 20px rgba(121, 40, 202, 0.3);
     }
 
-    /* --- สีสันหัวข้อ Section ใหม่สุดปัง --- */
+    /* --- สีสันหัวข้อ Section --- */
     .section-perf {
         font-size: 28px; font-weight: 900; text-align: center;
-        background: linear-gradient(to right, #f59e0b, #e879f9); /* ทองไปชมพู */
+        background: linear-gradient(to right, #f59e0b, #e879f9); 
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         letter-spacing: 3px; margin: 40px 0 20px 0; padding-bottom: 10px;
         border-bottom: 2px dashed rgba(232, 121, 249, 0.4);
@@ -47,16 +47,15 @@ st.markdown("""
     
     .section-news {
         font-size: 28px; font-weight: 900; text-align: center;
-        background: linear-gradient(to right, #06b6d4, #4ade80); /* ฟ้าไปเขียวนีออน */
+        background: linear-gradient(to right, #06b6d4, #4ade80); 
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         letter-spacing: 3px; margin: 40px 0 20px 0; padding-bottom: 10px;
         border-bottom: 2px dashed rgba(74, 222, 128, 0.4);
     }
 
-    /* หัวข้อย่อยในกล่อง */
     .sub-header { color: #38bdf8; text-align: center; font-size: 18px; font-weight: 800; margin-bottom: 15px; }
 
-    /* --- 📊 สไตล์ตาราง (กลางเป๊ะ สูงเท่ากัน) --- */
+    /* --- 📊 สไตล์ตาราง --- */
     .table-wrapper {
         height: 480px; overflow-y: auto; overflow-x: auto;
         border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);
@@ -92,7 +91,6 @@ st.markdown("""
     .btn-crypto { background: #dc2626; }
     .btn-thai { background: #059669; }
     
-    /* ตัวเลข Metric */
     div[data-testid="stMetricValue"] > div { color: #ffffff !important; font-size: 40px !important; font-weight: 800 !important; }
     </style>
     """, unsafe_allow_html=True)
@@ -101,7 +99,7 @@ st.markdown("""
 with st.sidebar:
     st.title("👨‍💼 มายนี่ Assistant")
     st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=100)
-    st.info("อัปเกรดสีหัวข้อ Section ใหม่ และเอาวงเล็บออกให้เรียบร้อยค่ะ! 🚀")
+    st.info("อัปเดตแหล่งข่าว CNBC แก้ปัญหาข่าวไม่ขึ้นเรียบร้อยค่ะ! 🚀")
     if st.button("🔄 REFRESH DATA"):
         st.cache_data.clear()
         st.rerun()
@@ -196,21 +194,7 @@ def get_news(url):
         return results
     except: return []
 
+# ⚠️ อัปเดตแหล่งข่าวตรงนี้ค่ะ: เปลี่ยนจาก Google News เป็น CNBC และแหล่งข่าวที่เสถียรกว่า ⚠️
 news_list = [
-    (c1, "🟡 GOLD NEWS", "https://news.google.com/rss/search?q=gold+spot+market&hl=en-US&gl=US&ceid=US:en", "card-gold", "btn-gold"),
-    (c2, "🟠 CRYPTO NEWS", "https://cointelegraph.com/rss", "card-crypto", "btn-crypto"),
-    (c3, "🟢 THAI MARKET", "https://news.google.com/rss/search?q=SET50+OR+TFEX&hl=th&gl=TH&ceid=TH:th", "card-thai", "btn-thai")
-]
-
-for col, title, url, card_cls, btn_cls in news_list:
-    with col:
-        st.markdown(f"<h3 style='text-align: center; color: white; font-size:18px; margin-bottom:15px;'>{title}</h3>", unsafe_allow_html=True)
-        for n in get_news(url):
-            st.markdown(f"""
-            <div class="news-card {card_cls}">
-                <span class="news-date">🕒 {n['d']}</span>
-                <div class="news-title">{n['t']}</div>
-                <div class="news-snip">{n['s']}</div>
-                <a href="{n['l']}" target="_blank" class="btn {btn_cls}">READ STORY</a>
-            </div>
-            """, unsafe_allow_html=True)
+    (c1, "🟡 PRECIOUS METALS", "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000115", "card-gold", "btn-gold"), # ใช้ CNBC Commodities ทรงพลังและไม่บล็อก!
+    (c2, "🟠 DIGITAL ASSETS",
