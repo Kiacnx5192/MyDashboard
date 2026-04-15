@@ -197,4 +197,19 @@ def get_news(url):
 # ⚠️ อัปเดตแหล่งข่าวตรงนี้ค่ะ: เปลี่ยนจาก Google News เป็น CNBC และแหล่งข่าวที่เสถียรกว่า ⚠️
 news_list = [
     (c1, "🟡 PRECIOUS METALS", "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000115", "card-gold", "btn-gold"), # ใช้ CNBC Commodities ทรงพลังและไม่บล็อก!
-    (c2, "🟠 DIGITAL ASSETS",
+    (c2, "🟠 DIGITAL ASSETS", "https://cointelegraph.com/rss", "card-crypto", "btn-crypto"),
+    (c3, "🟢 SET & TFEX FOCUS", "https://news.google.com/rss/search?q=SET50+OR+TFEX&hl=th&gl=TH&ceid=TH:th", "card-thai", "btn-thai")
+]
+
+for col, title, url, card_cls, btn_cls in news_list:
+    with col:
+        st.markdown(f"<h3 style='text-align: center; color: white; font-size:18px; margin-bottom:15px;'>{title}</h3>", unsafe_allow_html=True)
+        for n in get_news(url):
+            st.markdown(f"""
+            <div class="news-card {card_cls}">
+                <span class="news-date">🕒 {n['d']}</span>
+                <div class="news-title">{n['t']}</div>
+                <div class="news-snip">{n['s']}</div>
+                <a href="{n['l']}" target="_blank" class="btn {btn_cls}">READ STORY</a>
+            </div>
+            """, unsafe_allow_html=True)
