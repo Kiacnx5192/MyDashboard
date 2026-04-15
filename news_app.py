@@ -6,7 +6,7 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 import json
-import time # เพิ่มโมดูลเรื่องเวลาสำหรับทำ Auto-Refresh
+import time
 
 # 1. ตั้งค่าหน้าตาแอป
 st.set_page_config(page_title="Carista Command Center", layout="wide", initial_sidebar_state="expanded")
@@ -18,7 +18,7 @@ def get_gspread_client():
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     return gspread.authorize(creds)
 
-# --- 🎨 CSS ---
+# --- 🎨 CSS: Cyber Theme สีสันจัดเต็ม ตารางกระชับ ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
@@ -146,7 +146,7 @@ elif page == "📊 Trading Desk":
     
     with st.expander("➕ ฟอร์มบันทึก Backtest (อัปเดต Real-time อัตโนมัติ)", expanded=True):
         with st.form("full_trade_form", clear_on_submit=True):
-            st.markdown("<p style='color:#94a3b8; font-size:14px; text-align:center;'>ไม่ต้องกังวลเรื่องสูตรโดนทับ มายนี่ล็อกเป้าหมายให้ลงบรรทัดที่ถูกต้องเป๊ะๆ ค่ะ</p>", unsafe_allow_html=True)
+            st.markdown("<p style='color:#94a3b8; font-size:14px; text-align:center;'>มายนี่กู้คืนช่อง P/L ให้แล้วนะคะ ส่วนช่อง R-Multiple และ Alignment จะปล่อยให้ Sheet คำนวณเองค่ะ</p>", unsafe_allow_html=True)
             
             c1, c2, c3 = st.columns(3)
             setup = c1.selectbox("รูปแบบที่เข้า (Setup)", ["แนวรับสำคัญ", "แนวต้านสำคัญ", "Breakout", "30/30/40"])
@@ -159,15 +159,16 @@ elif page == "📊 Trading Desk":
             tp = c6.number_input("ราคาทำกำไร (TP)", format="%.5f")
             exit_price = c7.number_input("ราคาออกจริง (Exit)", format="%.5f")
 
-            c8, c9 = st.columns(2)
-            best_price = c8.number_input("ราคาที่วิ่งไปไกลสุด (Best Price)", format="%.5f")
-            answer_trend = c9.selectbox("ทิศทางเฉลย", ["UP", "DOWN", "SIDEWAY"])
+            c8, c9, c10 = st.columns(3)
+            pl = c8.number_input("P/L ($) กำไร/ขาดทุน", format="%.2f") # กู้คืนช่องนี้ตามคำขอค่ะ!
+            best_price = c9.number_input("ราคาที่วิ่งไปไกลสุด (Best Price)", format="%.5f")
+            answer_trend = c10.selectbox("ทิศทางเฉลย", ["UP", "DOWN", "SIDEWAY"])
 
             st.markdown("<p style='color:#a78bfa; font-size:14px; margin-top:10px; border-bottom: 1px solid #4c1d95; padding-bottom: 5px;'>สถานะ Trend</p>", unsafe_allow_html=True)
-            c10, c11, c12 = st.columns(3)
-            trend_w1 = c10.selectbox("Trend W1", ["UP", "DOWN", "SIDEWAY"])
-            trend_d1 = c11.selectbox("Trend D1", ["UP", "DOWN", "SIDEWAY"])
-            trend_h4 = c12.selectbox("Trend H4", ["UP", "DOWN", "SIDEWAY"])
+            c11, c12, c13 = st.columns(3)
+            trend_w1 = c11.selectbox("Trend W1", ["UP", "DOWN", "SIDEWAY"])
+            trend_d1 = c12.selectbox("Trend D1", ["UP", "DOWN", "SIDEWAY"])
+            trend_h4 = c13.selectbox("Trend H4", ["UP", "DOWN", "SIDEWAY"])
 
             submit = st.form_submit_button("🚀 บันทึกข้อมูลลง Data8")
             
@@ -176,23 +177,30 @@ elif page == "📊 Trading Desk":
                     gc = get_gspread_client()
                     wks = gc.open_by_key("1uxDki739Juxrsu1HfYZAsmDVZETRtd-1liaw6LT8P8w").worksheet("Data8")
                     
-                    # ⚠️ ไม้ตายที่ 1: ล็อกเป้าหาบรรทัดว่างจากคอลัมน์ "Setup" (คอลัมน์ที่ 2)
+                    # หาบรรทัดต่อไปที่ว่าง
                     col_b = wks.col_values(2) 
-                    next_row = len(col_b) + 1 # บรรทัดต่อไปที่ว่างจริงๆ
-                    trade_no = next_row - 3   # รันเลขลำดับไม้เทรดอัตโนมัติ (หักหัวตาราง 3 บรรทัด)
+                    next_row = len(col_b) + 1 
+                    trade_no = next_row - 3   
                     
-                    # ส่งช่องว่าง ("") ไปให้ Google Sheet เพื่อรักษาลากสูตรไว้
-                    new_row = [trade_no, setup, direction, entry, sl, tp, exit_price, result, "", "", best_price, "", trend_w1, trend_d1, trend_h4, "", answer_trend]
+                    # ⚠️ Sniper Update 2.0: ยิงข้อมูลแบบข้ามช่องสูตร (J: R-Multiple และ P: Alignment)
+                    updates = [
+                        # ยิงช่วงแรก A ถึง I (ลำดับ จนถึง P/L)
+                        {'range': f'A{next_row}:I{next_row}', 'values': [[trade_no, setup, direction, entry, sl, tp, exit_price, result, pl]]},
+                        # เว้น J (R-Multiple) แล้วยิง K (Best Price)
+                        {'range': f'K{next_row}:K{next_row}', 'values': [[best_price]]},
+                        # เว้น L (Max Excursion) แล้วยิง M ถึง O (Trends)
+                        {'range': f'M{next_row}:O{next_row}', 'values': [[trend_w1, trend_d1, trend_h4]]},
+                        # เว้น P (Alignment) แล้วยิง Q (ทิศทางเฉลย)
+                        {'range': f'Q{next_row}:Q{next_row}', 'values': [[answer_trend]]}
+                    ]
                     
-                    # อัปเดตข้อมูลทับบรรทัดเป้าหมายเลย ไม่ใช้ append_row แล้ว!
-                    wks.update(range_name=f'A{next_row}:Q{next_row}', values=[new_row], value_input_option="USER_ENTERED")
+                    wks.batch_update(updates, value_input_option="USER_ENTERED")
                     
-                    st.success("บันทึกสำเร็จ! กำลังรีเฟรชตาราง...")
+                    st.success("บันทึกสำเร็จ! รอ Google Sheets คำนวณสูตรสักครู่นะคะ...")
                     
-                    # ⚠️ ไม้ตายที่ 2: สั่ง Auto-Refresh ทันที ⚠️
-                    st.cache_data.clear() # ล้างแคชเก่าทิ้ง
-                    time.sleep(1) # ให้เวลา Google Sheet คำนวณสูตร 1 วินาที
-                    st.rerun() # รีโหลดหน้าเว็บ ดึงข้อมูลใหม่โชว์ทันที
+                    st.cache_data.clear()
+                    time.sleep(2) 
+                    st.rerun() 
                     
                 except Exception as e:
                     st.error(f"บันทึกไม่สำเร็จ: {e}")
