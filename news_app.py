@@ -6,6 +6,7 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 import json
+import time # เพิ่มโมดูลเรื่องเวลาสำหรับทำ Auto-Refresh
 
 # 1. ตั้งค่าหน้าตาแอป
 st.set_page_config(page_title="Carista Command Center", layout="wide", initial_sidebar_state="expanded")
@@ -17,17 +18,16 @@ def get_gspread_client():
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     return gspread.authorize(creds)
 
-# --- 🎨 CSS: อัปเกรดสีสัน ลดความทะมึน และแก้ตารางห่าง ---
+# --- 🎨 CSS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
     .stApp { background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e1b4b 100%); color: #ffffff; font-family: 'Inter', sans-serif; }
     
-    /* กล่องกระจกเรืองแสง (Cyber Theme) */
     [data-testid="stVerticalBlockBorderWrapper"] { 
         background: rgba(30, 41, 59, 0.6) !important; backdrop-filter: blur(10px) !important;
         border: 1px solid rgba(56, 189, 248, 0.2) !important; border-radius: 16px !important; padding: 20px !important;
-        box-shadow: 0 0 20px rgba(56, 189, 248, 0.05) !important; /* เพิ่มแสงเงาบางๆ */
+        box-shadow: 0 0 20px rgba(56, 189, 248, 0.05) !important; 
     }
 
     [data-testid="stExpander"] details summary { background: linear-gradient(90deg, rgba(15,23,42,0.9) 0%, rgba(30,58,138,0.4) 100%) !important; color: #38bdf8 !important; border-radius: 8px !important; border: 1px solid rgba(56, 189, 248, 0.4) !important; padding: 15px !important; }
@@ -47,7 +47,6 @@ st.markdown("""
     .custom-table th { background: #0f172a; color: #7dd3fc; padding: 12px; text-align: center !important; position: sticky; top: 0; z-index: 2; border-bottom: 2px solid #38bdf8; font-size: 12px;}
     .custom-table td { padding: 10px; text-align: center !important; color: #f8fafc; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; white-space: nowrap;}
     
-    /* ⚠️ แก้ไขตารางฝั่งซ้ายให้กระชับ ไม่ถ่างกว้าง ⚠️ */
     .summary-table { width: 85%; margin: 0 auto; border-collapse: collapse; }
     .summary-table th { background: transparent; color: #7dd3fc; padding: 12px; text-align: center; border-bottom: 1px solid #38bdf8;}
     .summary-table td:first-child { text-align: left !important; padding-left: 20px; color: #cbd5e1;}
@@ -145,10 +144,9 @@ if page == "🌐 Market Insight":
 # =====================================================================
 elif page == "📊 Trading Desk":
     
-    # --- ส่วนที่ 1: ฟอร์มบันทึก (ตัดช่องสูตรออก ลดภาระคุณเกี๊ยะ!) ---
-    with st.expander("➕ ฟอร์มบันทึก Backtest (ระบบจะคำนวณ R-Multiple และกำไรให้อัตโนมัติใน Sheet)", expanded=True):
+    with st.expander("➕ ฟอร์มบันทึก Backtest (อัปเดต Real-time อัตโนมัติ)", expanded=True):
         with st.form("full_trade_form", clear_on_submit=True):
-            st.markdown("<p style='color:#94a3b8; font-size:14px; text-align:center;'>ไม่ต้องกรอกช่องที่มีสูตร (P/L, R-Multiple, ฯลฯ) บอทจะเว้นให้ Google Sheet คำนวณเองค่ะ!</p>", unsafe_allow_html=True)
+            st.markdown("<p style='color:#94a3b8; font-size:14px; text-align:center;'>ไม่ต้องกังวลเรื่องสูตรโดนทับ มายนี่ล็อกเป้าหมายให้ลงบรรทัดที่ถูกต้องเป๊ะๆ ค่ะ</p>", unsafe_allow_html=True)
             
             c1, c2, c3 = st.columns(3)
             setup = c1.selectbox("รูปแบบที่เข้า (Setup)", ["แนวรับสำคัญ", "แนวต้านสำคัญ", "Breakout", "30/30/40"])
@@ -171,28 +169,36 @@ elif page == "📊 Trading Desk":
             trend_d1 = c11.selectbox("Trend D1", ["UP", "DOWN", "SIDEWAY"])
             trend_h4 = c12.selectbox("Trend H4", ["UP", "DOWN", "SIDEWAY"])
 
-            submit = st.form_submit_button("🚀 บันทึกข้อมูล (ส่งไปคำนวณใน Google Sheet)")
+            submit = st.form_submit_button("🚀 บันทึกข้อมูลลง Data8")
             
             if submit:
                 try:
                     gc = get_gspread_client()
                     wks = gc.open_by_key("1uxDki739Juxrsu1HfYZAsmDVZETRtd-1liaw6LT8P8w").worksheet("Data8")
-                    total_rows = len([r for r in wks.get_all_values() if any(str(c).strip() for c in r)])
                     
-                    # ⚠️ เคล็ดลับ: ช่องไหนเป็นสูตร เราจะส่งค่าว่าง ("") ไปให้ Google Sheet จัดการเองค่ะ ⚠️
-                    # [ลำดับ, Setup, Buy/Sell, Entry, SL, TP, Exit Price, Result, P/L, R-Multiple, Best Price, Max Excursion, Trend W1, D1, H4, Alignment, ทิศทางเฉลย]
-                    new_row = [total_rows, setup, direction, entry, sl, tp, exit_price, result, "", "", best_price, "", trend_w1, trend_d1, trend_h4, "", answer_trend]
+                    # ⚠️ ไม้ตายที่ 1: ล็อกเป้าหาบรรทัดว่างจากคอลัมน์ "Setup" (คอลัมน์ที่ 2)
+                    col_b = wks.col_values(2) 
+                    next_row = len(col_b) + 1 # บรรทัดต่อไปที่ว่างจริงๆ
+                    trade_no = next_row - 3   # รันเลขลำดับไม้เทรดอัตโนมัติ (หักหัวตาราง 3 บรรทัด)
                     
-                    # บังคับให้เป็น USER_ENTERED เพื่อให้ Google Sheet รันสูตรต่อได้
-                    wks.append_row(new_row, value_input_option="USER_ENTERED")
-                    st.success("บันทึกสำเร็จ! ข้อมูลถูกส่งไปให้ Google Sheet คำนวณสูตรต่อแล้วค่ะ ✨")
-                    st.cache_data.clear()
+                    # ส่งช่องว่าง ("") ไปให้ Google Sheet เพื่อรักษาลากสูตรไว้
+                    new_row = [trade_no, setup, direction, entry, sl, tp, exit_price, result, "", "", best_price, "", trend_w1, trend_d1, trend_h4, "", answer_trend]
+                    
+                    # อัปเดตข้อมูลทับบรรทัดเป้าหมายเลย ไม่ใช้ append_row แล้ว!
+                    wks.update(range_name=f'A{next_row}:Q{next_row}', values=[new_row], value_input_option="USER_ENTERED")
+                    
+                    st.success("บันทึกสำเร็จ! กำลังรีเฟรชตาราง...")
+                    
+                    # ⚠️ ไม้ตายที่ 2: สั่ง Auto-Refresh ทันที ⚠️
+                    st.cache_data.clear() # ล้างแคชเก่าทิ้ง
+                    time.sleep(1) # ให้เวลา Google Sheet คำนวณสูตร 1 วินาที
+                    st.rerun() # รีโหลดหน้าเว็บ ดึงข้อมูลใหม่โชว์ทันที
+                    
                 except Exception as e:
                     st.error(f"บันทึกไม่สำเร็จ: {e}")
 
     st.divider()
 
-    # --- ส่วนที่ 2: แสดงผลตาราง ---
     col_left, col_right = st.columns([1, 1.8]) 
 
     with col_left:
@@ -200,7 +206,6 @@ elif page == "📊 Trading Desk":
             st.markdown('<div class="sub-header">📊 วิเคราะห์การเทรด</div>', unsafe_allow_html=True)
             df_dash = load_dashboard_data()
             if not df_dash.empty and len(df_dash.columns) >= 2:
-                # ⚠️ เปลี่ยนไปใช้คลาส summary-table ที่บีบให้แคบลงและสวยงาม ⚠️
                 html = '<table class="summary-table"><thead><tr><th>รายการวิเคราะห์</th><th>ข้อมูลสรุป</th></tr></thead><tbody>'
                 for _, row in df_dash.iloc[:, :2].iterrows():
                     if str(row.iloc[0]).strip() not in ['-', '']:
