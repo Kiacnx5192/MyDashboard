@@ -16,16 +16,26 @@ def get_gspread_client():
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     return gspread.authorize(creds)
 
+# ฟังก์ชันแปลงตัวเลขให้ปลอดภัย (ป้องกัน Error ดึงช่องว่างมาเป็นตัวเลข)
+def safe_float(val):
+    try:
+        return float(str(val).replace(',', ''))
+    except:
+        return 0.0
+
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
     .stApp { background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e1b4b 100%); color: #ffffff; font-family: 'Inter', sans-serif; }
     [data-testid="stVerticalBlockBorderWrapper"] { background: rgba(30, 41, 59, 0.6) !important; backdrop-filter: blur(10px) !important; border: 1px solid rgba(56, 189, 248, 0.2) !important; border-radius: 16px !important; padding: 20px !important; box-shadow: 0 0 20px rgba(56, 189, 248, 0.05) !important; }
-    [data-testid="stExpander"] details summary { background: linear-gradient(90deg, rgba(15,23,42,0.9) 0%, rgba(30,58,138,0.4) 100%) !important; color: #38bdf8 !important; border-radius: 8px !important; border: 1px solid rgba(56, 189, 248, 0.4) !important; padding: 15px !important; }
-    [data-testid="stExpander"] details summary p { color: #7dd3fc !important; font-size: 16px !important; font-weight: 800 !important; letter-spacing: 1px;}
+    .stTabs [data-baseweb="tab-list"] { background-color: transparent; gap: 10px; }
+    .stTabs [data-baseweb="tab"] { background-color: rgba(15, 23, 42, 0.6); border-radius: 8px 8px 0 0; border: 1px solid rgba(56, 189, 248, 0.3); border-bottom: none; color: #cbd5e1; padding: 10px 20px; }
+    .stTabs [aria-selected="true"] { background: linear-gradient(90deg, rgba(30,58,138,0.8) 0%, rgba(15,23,42,0.9) 100%) !important; color: #38bdf8 !important; font-weight: bold; border: 1px solid #38bdf8 !important; border-bottom: none !important; }
     .stTextInput label p, .stSelectbox label p, .stNumberInput label p { color: #cbd5e1 !important; font-size: 13px !important; font-weight: 600 !important; }
-    div[data-testid="stFormSubmitButton"] button { background: linear-gradient(to right, #0ea5e9, #8b5cf6) !important; color: white !important; font-weight: 800 !important; border: none !important; border-radius: 8px !important; padding: 10px 20px !important; width: 100% !important; text-transform: uppercase; letter-spacing: 1px;}
-    div[data-testid="stFormSubmitButton"] button:hover { box-shadow: 0 0 20px rgba(139, 92, 246, 0.6) !important; }
+    div[data-testid="stFormSubmitButton"] button, .btn-primary { background: linear-gradient(to right, #0ea5e9, #8b5cf6) !important; color: white !important; font-weight: 800 !important; border: none !important; border-radius: 8px !important; padding: 10px 20px !important; width: 100% !important; text-transform: uppercase; letter-spacing: 1px;}
+    div[data-testid="stFormSubmitButton"] button:hover, .btn-primary:hover { box-shadow: 0 0 20px rgba(139, 92, 246, 0.6) !important; }
+    .btn-danger { background: linear-gradient(to right, #ef4444, #b91c1c) !important; color: white !important; font-weight: 800 !important; border: none !important; border-radius: 8px !important; padding: 10px 20px !important; width: 100% !important; }
+    .btn-danger:hover { box-shadow: 0 0 20px rgba(239, 68, 68, 0.6) !important; }
     .main-title { font-size: 50px; font-weight: 900; text-align: center; background: linear-gradient(to right, #38bdf8, #e879f9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px; text-shadow: 0 0 30px rgba(232, 121, 249, 0.2);}
     .section-header { font-size: 24px; font-weight: 900; text-align: center; background: linear-gradient(to right, #f59e0b, #f43f5e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 2px; margin: 20px 0; border-bottom: 2px dashed rgba(244, 63, 94, 0.4); padding-bottom: 10px;}
     .sub-header { color: #a78bfa; text-align: center; font-size: 20px; font-weight: 800; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;}
@@ -97,22 +107,19 @@ if page == "🌐 Market Insight":
     m2.metric("🟠 BTC", f"{p[1][0]:,.2f}", f"{p[1][1]:+,.2f}")
     m3.metric("🟢 SET", f"{p[2][0]:,.2f}", f"{p[2][1]:+,.2f}")
     m4.metric("🔵 USDTHB", f"{p[3][0]:,.3f}", f"{p[3][1]:+,.3f}", delta_color="inverse")
-
+    
     st.markdown('<div class="section-header">GLOBAL NEWS FEED</div>', unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
-
     def get_news(url):
         try:
             f = feedparser.parse(url, agent='Mozilla/5.0')
             return [{'t': e.title, 'l': e.link, 'd': e.get('published', 'Recent')[:25], 's': re.sub('<.*?>', '', e.get('summary', ''))[:100]+'...'} for e in f.entries[:3]]
         except: return []
-
     news_list = [
         (c1, "🟡 GOLD NEWS", "https://news.google.com/rss/search?q=gold+price+OR+XAUUSD+-sdbullion&hl=en-US&gl=US&ceid=US:en", "card-gold", "btn-gold"),
         (c2, "🟠 CRYPTO NEWS", "https://cointelegraph.com/rss", "card-crypto", "btn-crypto"),
         (c3, "🟢 THAI MARKET", "https://news.google.com/rss/search?q=SET50+OR+TFEX&hl=th&gl=TH&ceid=TH:th", "card-thai", "btn-thai")
     ]
-
     for col, title, url, card_cls, btn_cls in news_list:
         with col:
             st.markdown(f"<h3 style='text-align: center; color: white; font-size:18px;'>{title}</h3>", unsafe_allow_html=True)
@@ -121,9 +128,12 @@ if page == "🌐 Market Insight":
 
 elif page == "📊 Trading Desk":
     
-    with st.expander("➕ ฟอร์มบันทึก Backtest", expanded=True):
-        with st.form("full_trade_form", clear_on_submit=True):
-            
+    # ⚠️ ระบบแยก Tabs (เพิ่มใหม่ และ แก้ไข/ลบ) ⚠️
+    tab1, tab2 = st.tabs(["➕ เพิ่มไม้เทรดใหม่ (Add New)", "✏️ แก้ไข / ลบ ข้อมูล (Edit & Delete)"])
+    
+    with tab1:
+        with st.form("add_trade_form", clear_on_submit=True):
+            st.markdown("<p style='color:#94a3b8; font-size:14px; text-align:center;'>บันทึกไม้ใหม่ลงต่อท้าย Sheet ข้อมูลจะกระโดดข้ามช่องสูตรให้อัตโนมัติ</p>", unsafe_allow_html=True)
             c1, c2, c3 = st.columns(3)
             setup = c1.selectbox("รูปแบบที่เข้า (Setup)", ["แนวรับสำคัญ", "แนวต้านสำคัญ", "Breakout", "30/30/40"])
             direction = c2.selectbox("Buy/Sell", ["Buy", "Sell"])
@@ -146,21 +156,16 @@ elif page == "📊 Trading Desk":
             trend_d1 = c12.selectbox("Trend D1", ["UP", "DOWN", "SIDEWAY"])
             trend_h4 = c13.selectbox("Trend H4", ["UP", "DOWN", "SIDEWAY"])
 
-            submit = st.form_submit_button("🚀 บันทึกข้อมูลลง Data8")
+            submit_add = st.form_submit_button("🚀 บันทึกข้อมูลลง Data8")
             
-            if submit:
+            if submit_add:
                 try:
                     gc = get_gspread_client()
                     wks = gc.open_by_key("1uxDki739Juxrsu1HfYZAsmDVZETRtd-1liaw6LT8P8w").worksheet("Data8")
-                    
                     col_b = wks.col_values(2) 
                     next_row = len(col_b) + 1 
                     trade_no = next_row - 3   
-                    
-                    # ⚠️ ตัวดักจับ: ถ้า Best Price เป็น 0 (ไม่ได้กรอก) ให้ส่งเป็นช่องว่างแทน Sheet จะได้ไม่รวน!
                     bp_final = best_price if best_price != 0.0 else ""
-                    
-                    # ⚠️ ตัวดักจับ: ถ้า P/L เป็น 0 ให้ส่งเป็นช่องว่าง (หรือถ้าคุณเกี๊ยะตั้งใจให้เป็น 0 ก็จะส่ง 0 ไปค่ะ)
                     pl_final = pl if pl != 0.0 else ""
 
                     updates = [
@@ -169,17 +174,115 @@ elif page == "📊 Trading Desk":
                         {'range': f'M{next_row}:O{next_row}', 'values': [[trend_w1, trend_d1, trend_h4]]},
                         {'range': f'Q{next_row}:Q{next_row}', 'values': [[answer_trend]]}
                     ]
-                    
                     wks.batch_update(updates, value_input_option="USER_ENTERED")
-                    
-                    st.success("บันทึกสำเร็จ! รออัปเดตตารางสักครู่นะคะ...")
-                    
+                    st.success("บันทึกสำเร็จ! รออัปเดตตาราง...")
                     st.cache_data.clear()
                     time.sleep(2) 
                     st.rerun() 
-                    
                 except Exception as e:
                     st.error(f"บันทึกไม่สำเร็จ: {e}")
+
+    # ⚠️ ระบบ Edit / Delete ของแทร่! ⚠️
+    with tab2:
+        st.markdown("<p style='color:#f59e0b; font-size:14px; text-align:center;'>เลือกเลขลำดับไม้เทรดที่ต้องการแก้ไข หรือลบทิ้งถาวร</p>", unsafe_allow_html=True)
+        df_edit = load_log_data()
+        
+        if not df_edit.empty:
+            # ดึงรายชื่อลำดับไม้เทรดทั้งหมดมาใส่ใน Dropdown
+            trade_ids = [str(x) for x in df_edit.iloc[:, 0].tolist() if str(x).strip() not in ['', '-']]
+            
+            if trade_ids:
+                selected_id = st.selectbox("🔍 ค้นหาลำดับไม้เทรด:", ["-- เลือก --"] + trade_ids)
+                
+                if selected_id != "-- เลือก --":
+                    # ดึงข้อมูลของไม้เทรดนั้นๆ มาจาก DataFrame
+                    row_data = df_edit[df_edit.iloc[:, 0].astype(str) == selected_id].iloc[0]
+                    
+                    with st.form("edit_trade_form"):
+                        e1, e2, e3 = st.columns(3)
+                        # ใช้ try-except ในการหา index ค่าเดิม เพื่อไม่ให้ error เวลาตั้งค่า default
+                        setup_options = ["แนวรับสำคัญ", "แนวต้านสำคัญ", "Breakout", "30/30/40"]
+                        s_idx = setup_options.index(row_data.iloc[1]) if row_data.iloc[1] in setup_options else 0
+                        e_setup = e1.selectbox("รูปแบบที่เข้า", setup_options, index=s_idx)
+                        
+                        dir_options = ["Buy", "Sell"]
+                        d_idx = dir_options.index(row_data.iloc[2]) if row_data.iloc[2] in dir_options else 0
+                        e_direction = e2.selectbox("Buy/Sell", dir_options, index=d_idx)
+                        
+                        res_options = ["Pending", "Win", "Loss", "กันทุน"]
+                        r_idx = res_options.index(row_data.iloc[7]) if row_data.iloc[7] in res_options else 0
+                        e_result = e3.selectbox("ผลลัพธ์", res_options, index=r_idx)
+
+                        e4, e5, e6, e7 = st.columns(4)
+                        e_entry = e4.number_input("ราคาเข้า", value=safe_float(row_data.iloc[3]), format="%.5f")
+                        e_sl = e5.number_input("ราคาตัดขาดทุน", value=safe_float(row_data.iloc[4]), format="%.5f")
+                        e_tp = e6.number_input("ราคาทำกำไร", value=safe_float(row_data.iloc[5]), format="%.5f")
+                        e_exit = e7.number_input("ราคาออกจริง", value=safe_float(row_data.iloc[6]), format="%.5f")
+
+                        e8, e9, e10 = st.columns(3)
+                        e_pl = e8.number_input("P/L ($)", value=safe_float(row_data.iloc[8]), format="%.2f")
+                        e_best = e9.number_input("ราคาที่วิ่งไปไกลสุด", value=safe_float(row_data.iloc[10]), format="%.5f")
+                        
+                        ans_options = ["UP", "DOWN", "SIDEWAY"]
+                        a_idx = ans_options.index(row_data.iloc[16]) if len(row_data) > 16 and row_data.iloc[16] in ans_options else 0
+                        e_ans = e10.selectbox("ทิศทางเฉลย", ans_options, index=a_idx)
+
+                        st.markdown("<p style='color:#a78bfa; font-size:14px; margin-top:10px;'>แก้ไขสถานะ Trend</p>", unsafe_allow_html=True)
+                        e11, e12, e13 = st.columns(3)
+                        tw_idx = ans_options.index(row_data.iloc[12]) if row_data.iloc[12] in ans_options else 0
+                        td_idx = ans_options.index(row_data.iloc[13]) if row_data.iloc[13] in ans_options else 0
+                        th_idx = ans_options.index(row_data.iloc[14]) if row_data.iloc[14] in ans_options else 0
+                        e_tw = e11.selectbox("Trend W1", ans_options, index=tw_idx)
+                        e_td = e12.selectbox("Trend D1", ans_options, index=td_idx)
+                        e_th = e13.selectbox("Trend H4", ans_options, index=th_idx)
+
+                        col_btn1, col_btn2 = st.columns(2)
+                        submit_update = col_btn1.form_submit_button("🔄 อัปเดตข้อมูล (Update)")
+                        submit_delete = col_btn2.form_submit_button("🗑️ ลบไม้เทรดนี้ (Delete)", use_container_width=True)
+
+                        # Logic อัปเดต
+                        if submit_update:
+                            try:
+                                gc = get_gspread_client()
+                                wks = gc.open_by_key("1uxDki739Juxrsu1HfYZAsmDVZETRtd-1liaw6LT8P8w").worksheet("Data8")
+                                # หาว่าลำดับนี้อยู่บรรทัดไหนใน Sheet จริงๆ
+                                col_a = wks.col_values(1)
+                                target_row = col_a.index(str(selected_id)) + 1 
+                                
+                                e_bp_final = e_best if e_best != 0.0 else ""
+                                e_pl_final = e_pl if e_pl != 0.0 else ""
+
+                                updates = [
+                                    {'range': f'A{target_row}:I{target_row}', 'values': [[int(selected_id), e_setup, e_direction, e_entry, e_sl, e_tp, e_exit, e_result, e_pl_final]]},
+                                    {'range': f'K{target_row}:K{target_row}', 'values': [[e_bp_final]]},
+                                    {'range': f'M{target_row}:O{target_row}', 'values': [[e_tw, e_td, e_th]]},
+                                    {'range': f'Q{target_row}:Q{target_row}', 'values': [[e_ans]]}
+                                ]
+                                wks.batch_update(updates, value_input_option="USER_ENTERED")
+                                st.success("อัปเดตข้อมูลสำเร็จ! รออัปเดตตาราง...")
+                                st.cache_data.clear()
+                                time.sleep(2)
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"อัปเดตไม่สำเร็จ: {e}")
+
+                        # Logic ลบ
+                        if submit_delete:
+                            try:
+                                gc = get_gspread_client()
+                                wks = gc.open_by_key("1uxDki739Juxrsu1HfYZAsmDVZETRtd-1liaw6LT8P8w").worksheet("Data8")
+                                col_a = wks.col_values(1)
+                                target_row = col_a.index(str(selected_id)) + 1 
+                                
+                                wks.delete_rows(target_row) # ลบทิ้งทั้งบรรทัด
+                                st.success("ลบข้อมูลสำเร็จ! รออัปเดตตาราง...")
+                                st.cache_data.clear()
+                                time.sleep(2)
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"ลบไม่สำเร็จ: {e}")
+            else:
+                st.info("ยังไม่มีข้อมูลไม้เทรดให้แก้ไขค่ะ")
 
     st.divider()
     col_left, col_right = st.columns([1, 1.8]) 
