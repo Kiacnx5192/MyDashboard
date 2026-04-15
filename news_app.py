@@ -17,7 +17,7 @@ def get_gspread_client():
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     return gspread.authorize(creds)
 
-# --- 🎨 CSS ---
+# --- 🎨 CSS แก้ไขปุ่ม, กล่อง Expander และ Label ให้ชัดเจน ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
@@ -28,6 +28,34 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.1) !important; border-radius: 16px !important; padding: 20px !important;
     }
 
+    /* ⚠️ แก้ไขกล่อง Expander ให้เป็นสีเข้ม ไม่กลายเป็นสีขาว ⚠️ */
+    [data-testid="stExpander"] details summary {
+        background-color: rgba(15, 23, 42, 0.8) !important;
+        color: #38bdf8 !important;
+        border-radius: 8px !important;
+        border: 1px solid rgba(56, 189, 248, 0.3) !important;
+        padding: 15px !important;
+    }
+    [data-testid="stExpander"] details summary:hover {
+        background-color: rgba(56, 189, 248, 0.15) !important;
+    }
+    [data-testid="stExpander"] details summary p {
+        color: #38bdf8 !important;
+        font-size: 16px !important;
+        font-weight: 800 !important;
+    }
+    [data-testid="stExpander"] details summary svg {
+        fill: #38bdf8 !important; /* เปลี่ยนสีลูกศร */
+    }
+    
+    /* ⚠️ แก้ไขตัวหนังสือ Label เหนือช่องกรอกให้สว่างและชัดเจน ⚠️ */
+    .stTextInput label p, .stSelectbox label p, .stNumberInput label p {
+        color: #e2e8f0 !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+    }
+
+    /* ตกแต่งปุ่ม Submit ให้เด่นชัด */
     div[data-testid="stFormSubmitButton"] button {
         background: linear-gradient(to right, #0ea5e9, #3b82f6) !important;
         color: white !important; font-weight: 800 !important;
@@ -102,7 +130,6 @@ with m4:
 # ---------------- 📊 Trading Performance ----------------
 st.markdown('<div class="section-perf">📊 TRADING PERFORMANCE</div>', unsafe_allow_html=True)
 
-# ⚠️ แยกฟังก์ชันดึงตารางซ้าย (Dashboard) ให้ทำงานอิสระ ไม่ไปกวนตารางอื่น
 @st.cache_data(ttl=10)
 def load_dashboard_data():
     try:
@@ -116,7 +143,6 @@ def load_dashboard_data():
     except Exception as e:
         return pd.DataFrame()
 
-# ⚠️ ฟังก์ชันดึงตารางขวา (Data8) พร้อมสแกนหาหัวตารางอัจฉริยะ
 @st.cache_data(ttl=10)
 def load_log_data():
     try:
@@ -155,22 +181,19 @@ with col_left:
             st.write("กำลังรอข้อมูล...")
 
 with col_right:
-    # --- 📝 ส่วนบันทึกข้อมูลแบบเต็มสตรีม (แก้ไขให้ตรงกับ Sheet จริง) ---
+    # --- 📝 ส่วนบันทึกข้อมูลแบบเต็มสตรีม ---
     with st.expander("➕ บันทึกไม้เทรดใหม่ (Write to Sheet)", expanded=False):
         with st.form("trade_form", clear_on_submit=True):
-            # แถวที่ 1
             f1, f2, f3 = st.columns(3)
             setup = f1.text_input("Setup รูปแบบที่เข้า", placeholder="เช่น 30/30/40")
             direction = f2.selectbox("Direction", ["Buy", "Sell"])
             result = f3.selectbox("Result ผลลัพธ์", ["Pending", "Win", "Loss", "กันทุน"])
             
-            # แถวที่ 2
             f4, f5, f6 = st.columns(3)
             entry = f4.number_input("Entry ราคาเข้า", format="%.5f")
             sl = f5.number_input("SL ราคาตัดขาดทุน", format="%.5f")
             tp = f6.number_input("TP ราคาทำกำไร", format="%.5f")
             
-            # แถวที่ 3
             f7, f8 = st.columns(2)
             exit_price = f7.number_input("Exit Price ราคาออกจริง", format="%.5f")
             pl = f8.number_input("P/L ($) กำไร/ขาดทุน", format="%.2f")
@@ -183,12 +206,9 @@ with col_right:
                     sh = gc.open_by_key("1uxDki739Juxrsu1HfYZAsmDVZETRtd-1liaw6LT8P8w")
                     wks = sh.worksheet("Data8")
                     
-                    # รันเลขลำดับอัตโนมัติ
                     all_vals = wks.get_all_values()
                     total_rows = len([r for r in all_vals if any(str(c).strip() for c in r)])
-                    # ถ้าแถวแรกๆ เป็นหัวข้อ เลขลำดับอาจจะต้องลบออกนิดหน่อย แต่ใช้ไปก่อนได้ค่ะ
                     
-                    # จัดเรียงข้อมูลให้ตรงกับคอลัมน์ [ลำดับ, Setup, Direction, Entry, SL, TP, Exit, Result, P/L]
                     new_row = [total_rows, setup, direction, entry, sl, tp, exit_price, result, pl]
                     wks.append_row(new_row)
                     st.success("บันทึกข้อมูลสำเร็จ! กด REFRESH DATA ที่ Sidebar เพื่อดูอัปเดตค่ะ ✨")
