@@ -20,7 +20,7 @@ def get_gspread_client():
         creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
         return gspread.authorize(creds)
     except Exception as e:
-        st.error(f"การเชื่อมต่อ Google Sheets มีปัญหา: {e}")
+        st.error(f"Connection Error: {e}")
         return None
 
 def safe_float(val):
@@ -29,7 +29,7 @@ def safe_float(val):
     except:
         return 0.0
 
-# --- 🎨 GLOBAL NEON CYBER CSS ---
+# --- 🎨 GLOBAL NEON CSS (Fixed All Styles) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
@@ -41,13 +41,15 @@ st.markdown("""
         box-shadow: 0 0 25px rgba(56, 189, 248, 0.15) !important; 
     }
 
-    .stTabs [data-baseweb="tab-list"] { background-color: transparent; gap: 15px; }
-    .stTabs [data-baseweb="tab"] { background-color: rgba(15, 23, 42, 0.8); border-radius: 12px 12px 0 0; border: 1px solid rgba(232, 121, 249, 0.3); color: #cbd5e1; padding: 12px 25px; }
-    .stTabs [aria-selected="true"] { background: linear-gradient(to bottom, #7928ca, #ff0080) !important; color: #ffffff !important; font-weight: 900 !important; box-shadow: 0 0 15px rgba(255, 0, 128, 0.4) !important; }
-
-    .main-title { font-size: 50px; font-weight: 900; text-align: center; background: linear-gradient(to right, #00dfd8, #007cf0, #00dfd8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px; }
+    .main-title { font-size: 50px; font-weight: 900; text-align: center; background: linear-gradient(to right, #00dfd8, #007cf0, #00dfd8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 25px; }
     .sub-header { color: #f472b6; text-align: center; font-size: 22px; font-weight: 900; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 10px rgba(244, 114, 182, 0.3);}
 
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] { background-color: transparent; gap: 10px; }
+    .stTabs [data-baseweb="tab"] { background-color: rgba(15, 23, 42, 0.8); border-radius: 10px 10px 0 0; border: 1px solid rgba(232, 121, 249, 0.3); color: #cbd5e1; }
+    .stTabs [aria-selected="true"] { background: linear-gradient(to bottom, #7928ca, #ff0080) !important; color: #ffffff !important; font-weight: bold; border: 1px solid #ff0080 !important; }
+
+    /* Tables */
     .table-wrapper { height: 450px; overflow-y: auto; overflow-x: auto; border-radius: 15px; background: rgba(0,0,0,0.4); border: 1px solid rgba(56, 189, 248, 0.2); }
     .custom-table { width: 100%; border-collapse: collapse; min-width: 1000px; } 
     .custom-table th { background: #0f172a; color: #00dfd8; padding: 15px; position: sticky; top: 0; z-index: 10; border-bottom: 3px solid #007cf0; font-size: 13px; text-transform: uppercase;}
@@ -56,14 +58,14 @@ st.markdown("""
     .summary-table { width: 100%; border-collapse: collapse; }
     .summary-table td:first-child { text-align: left !important; color: #94a3b8; padding: 10px; font-weight: 600;}
     .summary-table td:last-child { text-align: right !important; font-weight: 900; color: #fde047; padding: 10px; font-size: 16px;}
-    .summary-table tr { border-bottom: 1px solid rgba(255,255,255,0.08); }
 
-    .news-card { background: rgba(15, 23, 42, 0.85); padding: 20px; border-radius: 15px; margin-bottom: 15px; border-left: 5px solid #00dfd8; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+    /* News Feed */
+    .news-card { background: rgba(15, 23, 42, 0.85); padding: 20px; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); border-left: 5px solid #00dfd8; }
     .news-title { color: #ffffff; font-size: 16px; font-weight: 700; margin-bottom: 8px; }
     .btn-news { color: #00dfd8 !important; text-decoration: none; font-size: 13px; border: 1px solid #00dfd8; padding: 4px 12px; border-radius: 20px; }
 
+    /* Metrics & Buttons */
     div[data-testid="stMetricValue"] > div { color: #00dfd8 !important; font-size: 42px !important; font-weight: 900 !important; }
-    .stNumberInput label p, .stTextInput label p, .stSelectbox label p { color: #38bdf8 !important; font-weight: 700; }
     div[data-testid="stFormSubmitButton"] button { background: linear-gradient(45deg, #0070f3, #7928ca, #ff0080) !important; width: 100% !important; font-weight: 900 !important; }
     .low-stock { color: #ff0080 !important; font-weight: 900; text-shadow: 0 0 10px rgba(255, 0, 128, 0.5); }
     </style>
@@ -105,9 +107,8 @@ def load_sheet_data(sheet_name):
 # 🌐 PAGE 1: MARKET INSIGHT
 # =====================================================================
 if page == "🌐 MARKET INSIGHT":
-    st.markdown('<div style="text-align: center;"><img src="https://cdn-icons-png.flaticon.com/512/3859/3859033.png" width="80"></div>', unsafe_allow_html=True)
+    st.markdown('<div style="text-align: center;"><img src="https://cdn-icons-png.flaticon.com/512/2854/2854580.png" width="80"></div>', unsafe_allow_html=True)
     st.markdown('<h1 class="main-title">MARKET INSIGHT</h1>', unsafe_allow_html=True)
-    
     p = get_prices()
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("🟡 GOLD", f"{p[0][0]:,.2f}", f"{p[0][1]:+,.2f}")
@@ -117,16 +118,17 @@ if page == "🌐 MARKET INSIGHT":
     
     st.markdown("<h2 style='text-align: center; color: #f59e0b; margin: 30px 0;'>🌐 GLOBAL NEWS FEED</h2>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
-    urls = [("🟡 GOLD", "https://news.google.com/rss/search?q=gold+price&hl=en-US"), 
-            ("🟠 CRYPTO", "https://cointelegraph.com/rss"), 
-            ("🟢 THAI", "https://news.google.com/rss/search?q=SET50&hl=th")]
-    
-    for col, (title, url) in zip([c1, c2, c3], urls):
+    news_urls = [
+        ("🟡 GOLD NEWS", "https://news.google.com/rss/search?q=gold+price&hl=en-US", c1, "#fbbf24"),
+        ("🟠 CRYPTO NEWS", "https://cointelegraph.com/rss", c2, "#f43f5e"),
+        ("🟢 THAI MARKET", "https://news.google.com/rss/search?q=SET50&hl=th", c3, "#10b981")
+    ]
+    for title, url, col, color in news_urls:
         with col:
             st.markdown(f"<h3 style='text-align: center;'>{title}</h3>", unsafe_allow_html=True)
             f = feedparser.parse(url)
             for e in f.entries[:3]:
-                st.markdown(f'<div class="news-card"><strong>{e.title}</strong><br><a href="{e.link}" target="_blank" class="btn-news">READ STORY</a></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="news-card" style="border-left-color:{color};"><strong>{e.title}</strong><br><a href="{e.link}" target="_blank" class="btn-news">READ STORY</a></div>', unsafe_allow_html=True)
 
 # =====================================================================
 # 📊 PAGE 2: TRADING DESK
@@ -136,9 +138,8 @@ elif page == "📊 TRADING DESK":
     st.markdown('<h1 class="main-title">TRADING DESK</h1>', unsafe_allow_html=True)
     
     with st.container(border=True):
-        tab1, tab2 = st.tabs(["➕ ADD NEW", "✏️ MANAGE LOGS"])
-        
-        with tab1:
+        t1, t2 = st.tabs(["➕ ADD NEW TRADE", "✏️ MANAGE LOGS"])
+        with t1:
             with st.form("add_trade"):
                 c1, c2, c3 = st.columns(3)
                 setup = c1.selectbox("SETUP", ["แนวรับสำคัญ", "แนวต้านสำคัญ", "Breakout", "30/30/40"])
@@ -152,21 +153,18 @@ elif page == "📊 TRADING DESK":
                         gc = get_gspread_client(); wks = gc.open_by_key("1uxDki739Juxrsu1HfYZAsmDVZETRtd-1liaw6LT8P8w").worksheet("Data8")
                         next_r = len(wks.col_values(2)) + 1
                         wks.batch_update([{'range':f'A{next_r}:I{next_r}', 'values':[[next_r-3, setup, direction, en, sl, tp, ex, res, pl]]}, {'range':f'K{next_r}:K{next_r}', 'values':[[bp]]}], value_input_option="USER_ENTERED")
-                        st.success("SUCCESS!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+                        st.success("SAVED!"); st.cache_data.clear(); time.sleep(1); st.rerun()
                     except Exception as e: st.error(e)
-
-        with tab2:
-            st.warning("⚠️ แก้ไข หรือ Reset ข้อมูลได้ที่นี่")
-            conf = st.text_input("พิมพ์ RESET เพื่อล้างข้อมูล:")
+        with t2:
+            st.warning("⚠️ RESET ข้อมูลทั้งหมด (ลบไม้เทรด)")
+            conf = st.text_input("พิมพ์ RESET เพื่อยืนยัน:")
             if st.button("🧨 RESET DATA8", type="primary", disabled=(conf != "RESET")):
                 try:
                     gc = get_gspread_client(); gc.open_by_key("1uxDki739Juxrsu1HfYZAsmDVZETRtd-1liaw6LT8P8w").worksheet("Data8").batch_clear(["A4:Q1000"])
-                    st.success("RESET COMPLETE!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+                    st.success("RESET SUCCESS!"); st.cache_data.clear(); time.sleep(1); st.rerun()
                 except Exception as e: st.error(e)
 
     st.divider()
-    
-    # --- ANALYSIS & LOGS SIDE BY SIDE ---
     col_l, col_r = st.columns([1, 2.2])
     with col_l:
         st.markdown('<div class="sub-header">📈 SUMMARY</div>', unsafe_allow_html=True)
@@ -174,10 +172,8 @@ elif page == "📊 TRADING DESK":
         if not df_dash.empty:
             html = '<div class="table-wrapper"><table class="summary-table"><tbody>'
             for _, row in df_dash.iloc[:, :2].iterrows():
-                if str(row.iloc[0]).strip() != '-':
-                    html += f'<tr><td>{row.iloc[0]}</td><td>{row.iloc[1]}</td></tr>'
+                if str(row.iloc[0]).strip() != '-': html += f'<tr><td>{row.iloc[0]}</td><td>{row.iloc[1]}</td></tr>'
             st.markdown(html + '</tbody></table></div>', unsafe_allow_html=True)
-
     with col_r:
         st.markdown('<div class="sub-header">📝 RECENT LOGS</div>', unsafe_allow_html=True)
         df_log = load_sheet_data("Data8")
@@ -195,9 +191,8 @@ elif page == "📊 TRADING DESK":
 # 📦 PAGE 3: STOCK MANAGER
 # =====================================================================
 elif page == "📦 STOCK MANAGER":
-    st.markdown('<div style="text-align: center;"><img src="https://cdn-icons-png.flaticon.com/512/3045/3045488.png" width="80"></div>', unsafe_allow_html=True)
+    st.markdown('<div style="text-align: center;"><img src="https://cdn-icons-png.flaticon.com/512/2331/2331941.png" width="80"></div>', unsafe_allow_html=True)
     st.markdown('<h1 class="main-title">STOCK MANAGER</h1>', unsafe_allow_html=True)
-
     tab_inv, tab_out, tab_in = st.tabs(["💎 CURRENT STOCK", "📤 OUT (เบิก)", "📥 IN (เติม)"])
     df_stock = load_sheet_data("Master_Stock (ฐานข้อมูลหลัก)")
 
@@ -213,11 +208,9 @@ elif page == "📦 STOCK MANAGER":
                 cls = 'class="low-stock"' if qty <= warn else ""
                 html += f'<tr {cls}>' + "".join(f'<td>{v}</td>' for v in row) + '</tr>'
             st.markdown(html + '</tbody></table></div>', unsafe_allow_html=True)
-        else:
-            st.warning("กำลังโหลดข้อมูลสต็อก หรือยังไม่มีข้อมูลใน Sheet ค่ะ")
 
     with tab_out:
-        with st.form("out_form"):
+        with st.form("out"):
             c1, c2, c3 = st.columns(3)
             hn, p_name = c1.text_input("HN"), c2.text_input("ชื่อคนไข้")
             items = list(dict.fromkeys(df_stock.iloc[:, 0].tolist())) if not df_stock.empty else []
@@ -228,5 +221,18 @@ elif page == "📦 STOCK MANAGER":
                 try:
                     gc = get_gspread_client(); wks = gc.open_by_key("1uxDki739Juxrsu1HfYZAsmDVZETRtd-1liaw6LT8P8w").worksheet("Log_เบิกออก")
                     wks.append_row([datetime.now().strftime("%Y-%m-%d"), hn, p_name, cat, sz, cl, q], value_input_option="USER_ENTERED")
+                    st.success("SUCCESS!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+                except Exception as e: st.error(e)
+
+    with tab_in:
+        with st.form("in"):
+            c1, c2, c3 = st.columns(3)
+            cat_in = c1.selectbox("หมวดหมู่สินค้า", items)
+            sz_in, cl_in = c2.text_input("ไซส์ (IN)"), c3.text_input("สี (IN)")
+            q_in, cost = st.number_input("จำนวนรับเข้า", min_value=1), st.number_input("ต้นทุนรวม")
+            if st.form_submit_button("📥 CONFIRM"):
+                try:
+                    gc = get_gspread_client(); wks = gc.open_by_key("1uxDki739Juxrsu1HfYZAsmDVZETRtd-1liaw6LT8P8w").worksheet("Log_รับเข้า")
+                    wks.append_row([datetime.now().strftime("%Y-%m-%d"), cat_in, sz_in, cl_in, q_in, cost], value_input_option="USER_ENTERED")
                     st.success("SUCCESS!"); st.cache_data.clear(); time.sleep(1); st.rerun()
                 except Exception as e: st.error(e)
