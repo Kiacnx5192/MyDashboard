@@ -10,14 +10,14 @@ import json
 # 1. ตั้งค่าหน้าตาแอป
 st.set_page_config(page_title="Carista Command Center", layout="wide", initial_sidebar_state="collapsed")
 
-# --- 🔑 เชื่อมต่อ Google Sheets ด้วยตู้เซฟ Secrets ---
+# --- 🔑 เชื่อมต่อ Google Sheets ---
 def get_gspread_client():
     creds_dict = json.loads(st.secrets["google_creds"])
     scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     return gspread.authorize(creds)
 
-# --- 🎨 CSS ระดับพรีเมียม ---
+# --- 🎨 CSS แก้ไขปุ่มและจัดทรง ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
@@ -28,18 +28,28 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.1) !important; border-radius: 16px !important; padding: 20px !important;
     }
 
+    /* ตกแต่งปุ่ม Submit ให้เด่นชัด ไม่กลืนกับพื้นหลัง */
+    div[data-testid="stFormSubmitButton"] button {
+        background: linear-gradient(to right, #0ea5e9, #3b82f6) !important;
+        color: white !important; font-weight: 800 !important;
+        border: none !important; border-radius: 8px !important;
+        padding: 10px 20px !important; width: 100% !important;
+    }
+    div[data-testid="stFormSubmitButton"] button:hover {
+        background: linear-gradient(to right, #3b82f6, #0ea5e9) !important;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4) !important;
+    }
+
     .main-title { font-size: 60px; font-weight: 900; text-align: center; background: linear-gradient(to right, #ff0080, #7928ca, #0070f3); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .section-perf { font-size: 28px; font-weight: 900; text-align: center; background: linear-gradient(to right, #f59e0b, #e879f9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 3px; margin: 40px 0 20px 0; border-bottom: 2px dashed rgba(232, 121, 249, 0.4); }
     .section-news { font-size: 28px; font-weight: 900; text-align: center; background: linear-gradient(to right, #06b6d4, #4ade80); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 3px; margin: 40px 0 20px 0; border-bottom: 2px dashed rgba(74, 222, 128, 0.4); }
     .sub-header { color: #38bdf8; text-align: center; font-size: 18px; font-weight: 800; margin-bottom: 15px; }
 
-    /* สไตล์ตาราง */
     .table-wrapper { height: 480px; overflow-y: auto; overflow-x: auto; border-radius: 10px; background: rgba(0,0,0,0.2); }
     .custom-table { width: 100%; border-collapse: collapse; }
     .custom-table th { background: #0f172a; color: #38bdf8; padding: 12px; text-align: center !important; position: sticky; top: 0; z-index: 2; border-bottom: 2px solid #38bdf8; }
     .custom-table td { padding: 10px; text-align: center !important; color: #e2e8f0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
     
-    /* สไตล์ข่าว */
     .news-card { background: rgba(15, 23, 42, 0.6); padding: 18px; border-radius: 12px; margin-bottom: 15px; border-top: 1px solid rgba(255,255,255,0.05); }
     .card-gold { border-left: 5px solid #f59e0b; } .card-crypto { border-left: 5px solid #ef4444; } .card-thai { border-left: 5px solid #10b981; }
     .news-title { color: #ffffff; font-size: 15px; font-weight: 700; margin: 5px 0 8px 0; line-height: 1.4;}
@@ -63,7 +73,6 @@ with st.sidebar:
 # ---------------- 👑 Main Header ----------------
 st.markdown('<h1 class="main-title">Market Intelligence</h1>', unsafe_allow_html=True)
 
-# ---------------- 💰 Real-time Prices ----------------
 @st.cache_data(ttl=60)
 def get_prices():
     try:
@@ -94,6 +103,7 @@ with m4:
 # ---------------- 📊 Trading Performance ----------------
 st.markdown('<div class="section-perf">📊 TRADING PERFORMANCE</div>', unsafe_allow_html=True)
 
+# ⚠️ อัปเกรด: ระบบค้นหาหัวตารางอัจฉริยะ (หลบชื่อชีทที่แทรกอยู่ด้านบน)
 @st.cache_data(ttl=10)
 def load_sheet_data(sheet_name):
     try:
@@ -102,7 +112,16 @@ def load_sheet_data(sheet_name):
         worksheet = sh.worksheet(sheet_name)
         data = worksheet.get_all_values()
         if not data: return pd.DataFrame()
-        df = pd.DataFrame(data[1:], columns=data[0]) 
+        
+        # สแกนหาบรรทัดที่เป็นหัวตารางจริงๆ (หาคำว่า ลำดับ หรือ รายการ)
+        header_idx = 0
+        for i, row in enumerate(data[:5]): 
+            if any(keyword in str(cell) for cell in row for keyword in ["ลำดับ", "รายการ", "Setup"]):
+                header_idx = i
+                break
+                
+        df = pd.DataFrame(data[header_idx+1:], columns=data[header_idx]) 
+        df = df.loc[:, df.columns != ''] # ลบคอลัมน์ขยะที่ชื่อว่างๆ ทิ้ง
         return df.replace('', '-').dropna(axis=1, how='all')
     except Exception as e:
         return pd.DataFrame() 
@@ -116,12 +135,13 @@ with col_left:
         if not df_dash.empty and len(df_dash.columns) >= 2:
             html = '<div class="table-wrapper"><table class="custom-table"><thead><tr><th>รายการวิเคราะห์</th><th>ข้อมูลสรุป</th></tr></thead><tbody>'
             for _, row in df_dash.iloc[:, :2].iterrows():
-                html += f'<tr><td>{row.iloc[0]}</td><td><b style="color:#fde047;">{row.iloc[1]}</b></td></tr>'
+                # กรองพวกบรรทัดขยะที่ข้อมูลมีแค่ขีด (-) ออกไปให้ดูสะอาดตา
+                if str(row.iloc[0]).strip() != '-' and str(row.iloc[0]).strip() != '':
+                    html += f'<tr><td>{row.iloc[0]}</td><td><b style="color:#fde047;">{row.iloc[1]}</b></td></tr>'
             html += '</tbody></table></div>'
             st.markdown(html, unsafe_allow_html=True)
 
 with col_right:
-    # --- 📝 ส่วนบันทึกข้อมูล (Write Data) ---
     with st.expander("➕ บันทึกไม้เทรดใหม่ (Write to Sheet)", expanded=False):
         with st.form("trade_form", clear_on_submit=True):
             f1, f2, f3 = st.columns(3)
@@ -140,29 +160,36 @@ with col_right:
                     gc = get_gspread_client()
                     sh = gc.open_by_key("1uxDki739Juxrsu1HfYZAsmDVZETRtd-1liaw6LT8P8w")
                     wks = sh.worksheet("Data8")
-                    total_rows = len(wks.get_all_values())
+                    
+                    # นับเฉพาะแถวที่มีข้อมูลจริงๆ เพื่อรันเลขลำดับให้ถูกต้อง
+                    all_vals = wks.get_all_values()
+                    total_rows = len([r for r in all_vals if any(str(c).strip() for c in r)])
+                    
+                    # ข้อมูลที่จะส่งเข้า Sheet
                     new_row = [total_rows, setup, direction, entry, "-", "-", "-", result, pl]
                     wks.append_row(new_row)
                     st.success("บันทึกข้อมูลสำเร็จ! กด REFRESH DATA ที่ Sidebar เพื่อดูอัปเดตค่ะ ✨")
                     st.cache_data.clear()
                 except Exception as e:
-                    st.error(f"บันทึกไม่สำเร็จ: ตรวจสอบการแชร์ไฟล์ให้ carista-bot ด้วยนะคะ")
+                    st.error("บันทึกไม่สำเร็จ: ตรวจสอบการแชร์ไฟล์ให้ carista-bot นะคะ")
 
-    # แสดงตารางบันทึก
     with st.container(border=True):
         st.markdown('<div class="sub-header">📝 บันทึกการเทรดล่าสุด</div>', unsafe_allow_html=True)
         df_data = load_sheet_data("Data8")
         if not df_data.empty:
-            df_display = df_data.iloc[:, :8]
+            # ดึง 8 คอลัมน์แรกเพื่อความพอดีของหน้าจอ
+            df_display = df_data.iloc[:, :8] if len(df_data.columns) >= 8 else df_data
             html = '<div class="table-wrapper"><table class="custom-table"><thead><tr>'
             for col in df_display.columns: html += f'<th>{col}</th>'
             html += '</tr></thead><tbody>'
             for _, row in df_display.iterrows():
-                html += '<tr>'
-                for val in row:
-                    color = "#4ade80" if str(val).strip().lower() == "win" else "#f87171" if str(val).strip().lower() == "loss" else "inherit"
-                    html += f'<td style="color:{color};">{val}</td>'
-                html += '</tr>'
+                # กรองบรรทัดว่างๆ ออกไป
+                if str(row.iloc[0]).strip() != '-' and str(row.iloc[0]).strip() != '':
+                    html += '<tr>'
+                    for val in row:
+                        color = "#4ade80" if str(val).strip().lower() == "win" else "#f87171" if str(val).strip().lower() == "loss" else "inherit"
+                        html += f'<td style="color:{color};">{val}</td>'
+                    html += '</tr>'
             html += '</tbody></table></div>'
             st.markdown(html, unsafe_allow_html=True)
 
